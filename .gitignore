@@ -12,3 +12,5 @@ npm-debug.log*
 
 # admin data: user accounts, form entries and donor details. Never commit.
 /.local-data/
+.vercel
+.env*
