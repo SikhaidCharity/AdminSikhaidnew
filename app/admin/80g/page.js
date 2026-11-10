@@ -349,6 +349,7 @@ function TrustForm({ onSaved }) {
             <Field label="Trust Address *"><textarea rows={2} value={current.address} onChange={(e) => set('address', e.target.value)} /></Field>
             <div className="adm-grid-2">
               <Field label="Trust PAN *"><input type="text" maxLength={10} value={current.pan} onChange={(e) => set('pan', e.target.value.toUpperCase())} /></Field>
+              <Field label="Trust Registration No." hint="Printed as “Regd. No.” under the trust name."><input type="text" value={current.trustRegNo || ''} onChange={(e) => set('trustRegNo', e.target.value)} /></Field>
               <Field label="80G Registration No. *" hint="The unique registration number from the Income Tax Department."><input type="text" value={current.registrationNo} onChange={(e) => set('registrationNo', e.target.value)} /></Field>
               <Field label="Registration Date"><input type="text" placeholder="e.g. 28 May 2021" value={current.registrationDate} onChange={(e) => set('registrationDate', e.target.value)} /></Field>
               <Field label="Valid For" hint="e.g. AY 2022-23 to AY 2026-27"><input type="text" value={current.validity} onChange={(e) => set('validity', e.target.value)} /></Field>
