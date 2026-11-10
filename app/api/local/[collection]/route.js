@@ -1,4 +1,6 @@
+import { after } from 'next/server';
 import { afterDonation } from '@/lib/certificates';
+import { donorIdFor, recordDonation } from '@/lib/donors';
 import {
   ORDERED,
   SINGLETONS,
@@ -52,11 +54,15 @@ export async function POST(request, { params }) {
   if (cleaner) {
     const record = cleaner(body);
     if (!record) return Response.json({ error: 'Invalid entry' }, { status: 400, headers: cors() });
+    // Every donation belongs to a donor account, made automatically from the donor's email or phone.
+    if (collection === 'donations') record.donorId = donorIdFor(record.donor);
     const saved = await createItem(collection, record);
     // Every donation gets a receipt; the minimum amount or more also gets an 80G certificate. A problem there must
     // never stop the donation from being recorded, so it runs on its own.
     if (collection === 'donations') {
-      afterDonation(saved).catch((e) => console.error('Receipt / 80G failed:', e));
+      await recordDonation(saved).catch((e) => console.error('Donor account not updated:', e));
+      // after(): runs once the reply is sent, and the hosted server waits for it to finish.
+      after(() => afterDonation(saved).catch((e) => console.error('Receipt / 80G failed:', e)));
     }
     return Response.json({ id: saved.id }, { status: 201, headers: cors() });
   }

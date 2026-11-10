@@ -6,7 +6,7 @@ import { pdfResponse } from '@/lib/pdf-response';
 // The donor's PDF for a donation: the receipt, plus the 80G certificate when the amount qualifies.
 export async function GET(request, { params }) {
   if (isDisabled()) return notAvailable();
-  const { response: denied } = await guard(request, ['donations', 'monthly-donations']);
+  const { response: denied } = await guard(request, ['donations', 'monthly-donations', 'donors']);
   if (denied) return denied;
   const { id } = await params;
   const file = await pdfForDonation(id);

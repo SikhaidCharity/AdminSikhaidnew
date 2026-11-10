@@ -327,7 +327,7 @@ function TrustForm({ onSaved }) {
     e.preventDefault();
     setBusy(true);
     try {
-      const stored = await adminApi.saveAll('trust80g', { ...current, minAmount: Number(current.minAmount) || 2000, pan: String(current.pan || '').toUpperCase() });
+      const stored = await adminApi.saveAll('trust80g', { ...current, certStartNo: Number(current.certStartNo) || 1, minAmount: Number(current.minAmount) || 2000, pan: String(current.pan || '').toUpperCase() });
       setItems(stored);
       setForm(null);
       onSaved();
@@ -368,6 +368,9 @@ function TrustForm({ onSaved }) {
 
           <fieldset className="adm-section">
             <legend>Automation</legend>
+            <Field label="80G Certificate Number (start from)" hint="The next certificate gets this number, then each new one counts up by 1 (e.g. 151 gives SA/80G/2026-27/0151, 0152…). Numbers already used are never repeated.">
+              <input type="number" min="1" value={current.certStartNo ?? ''} placeholder="1" onChange={(e) => set('certStartNo', e.target.value.replace(/[^0-9]/g, ''))} />
+            </Field>
             <Field label="Minimum donation for a certificate (Rs.)">
               <input type="number" min="1" value={current.minAmount} onChange={(e) => set('minAmount', e.target.value)} />
             </Field>

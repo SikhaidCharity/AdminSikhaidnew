@@ -338,6 +338,7 @@ function CampaignForm({ initial, onCancel, onSaved }) {
           <Field label="Donate-Page Message" hint="Short message under the highlight line.">
             <textarea rows={2} value={form.donateMessage || ''} onChange={(e) => set('donateMessage', e.target.value)} />
           </Field>
+          <DonateColorField value={form.donateColor || ''} ctaText={form.ctaText} onChange={(color) => set('donateColor', color)} />
         </Section>
 
         <Section title="Fundraising Progress">
@@ -406,6 +407,55 @@ function CampaignForm({ initial, onCancel, onSaved }) {
         />
       </form>
     </Modal>
+  );
+}
+
+// Colour of this campaign's Donate buttons and its donation card. Empty = the standard blue.
+const DONATE_COLORS = [
+  ['', 'Standard blue'],
+  ['#1A237E', 'Indigo'],
+  ['#F6A21A', 'Saffron'],
+  ['#F97316', 'Orange'],
+  ['#DC2626', 'Red'],
+  ['#15803D', 'Green'],
+  ['#0F766E', 'Teal'],
+  ['#6D28D9', 'Purple'],
+];
+const STANDARD_GRADIENT = 'linear-gradient(120deg, #0a1f5c 0%, #1650a8 60%, #3f8fdd 100%)';
+// Dark text on light colours, white text on dark ones.
+const textOn = (hex) => {
+  const n = parseInt(String(hex).replace('#', ''), 16);
+  if (Number.isNaN(n)) return '#fff';
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? '#121A4A' : '#fff';
+};
+
+function DonateColorField({ value, ctaText, onChange }) {
+  const custom = value && !DONATE_COLORS.some(([c]) => c.toLowerCase() === value.toLowerCase());
+  return (
+    <Field label="Donate Button & Card Colour" hint="Used for this campaign's Donate buttons and its donation card.">
+      <div className="adm-colors">
+        {DONATE_COLORS.map(([color, name]) => (
+          <button
+            key={name}
+            type="button"
+            className="adm-swatch"
+            aria-label={name}
+            aria-pressed={(value || '') === color}
+            title={name}
+            style={{ background: color || STANDARD_GRADIENT }}
+            onClick={() => onChange(color)}
+          />
+        ))}
+        <label className="adm-swatch adm-swatch-pick" title="Pick any colour" aria-pressed={Boolean(custom)} style={custom ? { background: value } : undefined}>
+          <input type="color" aria-label="Pick any colour" value={value || '#1650A8'} onChange={(e) => onChange(e.target.value.toUpperCase())} />
+          {!custom && <span aria-hidden="true">+</span>}
+        </label>
+        <span className="adm-color-preview" style={{ background: value || STANDARD_GRADIENT, color: value ? textOn(value) : '#fff' }}>
+          {ctaText || 'Donate Now'}
+        </span>
+      </div>
+    </Field>
   );
 }
 

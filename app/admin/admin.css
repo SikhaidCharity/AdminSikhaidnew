@@ -244,3 +244,17 @@
   .adm-perm-grid { grid-template-columns: 1fr 1fr; }
 }
 .adm-top { align-items: start; }
+
+/* Campaign donate colour */
+.adm-colors { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.adm-swatch { position: relative; display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px #d6dbe4; cursor: pointer; overflow: hidden; }
+.adm-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px #1a237e; }
+.adm-swatch-pick { background: conic-gradient(#f44336, #ffeb3b, #4caf50, #00bcd4, #3f51b5, #e91e63, #f44336); color: #fff; font-size: 18px; font-weight: 700; }
+.adm-swatch-pick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.adm-color-preview { margin-left: 6px; padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 700; }
+
+/* Donors */
+.adm-row-click { cursor: pointer; }
+.adm-row-click:hover td, .adm-row-click:focus-visible td { background: #f5f7fc; }
+.adm-row-click:focus-visible { outline: 2px solid #1a237e; outline-offset: -2px; }
+.adm-h3 { margin: 22px 0 10px; font-size: 15px; font-weight: 800; color: #121a4a; }
