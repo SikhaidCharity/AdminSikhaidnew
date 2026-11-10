@@ -1,8 +1,9 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { isDisabled, notAvailable } from '@/lib/local-store';
 import { websitePath } from '@/lib/paths';
+import { bucketName, hasFirebase, v2File } from '@/lib/firebase';
 import { UPLOAD_SECTIONS, guard } from '@/lib/admin-users';
 
 const MB = 1024 * 1024;
@@ -33,9 +34,22 @@ export async function POST(request) {
   }
 
   const name = `${Date.now()}-${randomBytes(4).toString('hex')}.${rule.ext}`;
+  const bytes = Buffer.from(await file.arrayBuffer());
+  if (hasFirebase()) {
+    // Saved in Firebase Storage under v2/uploads/, with a public download link.
+    const token = randomUUID();
+    await v2File(`uploads/${name}`).save(bytes, {
+      contentType: file.type,
+      metadata: { cacheControl: 'public, max-age=31536000', metadata: { firebaseStorageDownloadTokens: token } },
+    });
+    const objectPath = encodeURIComponent(`v2/uploads/${name}`);
+    return Response.json({
+      url: `https://firebasestorage.googleapis.com/v0/b/${bucketName()}/o/${objectPath}?alt=media&token=${token}`,
+    });
+  }
   // Saved into the website, which serves them at /uploads/...
   const folder = websitePath('public', 'uploads');
   await fs.mkdir(folder, { recursive: true });
-  await fs.writeFile(path.join(folder, name), Buffer.from(await file.arrayBuffer()));
+  await fs.writeFile(path.join(folder, name), bytes);
   return Response.json({ url: `/uploads/${name}` });
 }
