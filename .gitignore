@@ -1,0 +1,14 @@
+/node_modules
+/.next/
+/out/
+/build
+.DS_Store
+*.pem
+npm-debug.log*
+
+# secrets
+.env
+.env*.local
+
+# admin data: user accounts, form entries and donor details. Never commit.
+/.local-data/
