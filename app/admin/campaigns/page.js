@@ -418,7 +418,7 @@ function CampaignForm({ initial, onCancel, onSaved }) {
 
 // Colour of this campaign's Donate buttons and its donation card. Empty = the standard blue.
 const DONATE_COLORS = [
-  ['', 'Standard blue'],
+  ['', 'Standard navy'],
   ['#1A237E', 'Indigo'],
   ['#F6A21A', 'Saffron'],
   ['#F97316', 'Orange'],
@@ -428,7 +428,7 @@ const DONATE_COLORS = [
   ['#6D28D9', 'Purple'],
 ];
 // The website's standard Donate colour when a campaign doesn't choose one (same as lib/donate-color.js there).
-const STANDARD_COLOR = '#1650A8';
+const STANDARD_COLOR = '#121A4A';
 const STANDARD_GRADIENT = 'linear-gradient(120deg, #0a1f5c 0%, #1650a8 60%, #3f8fdd 100%)';
 const darker = (hex, amount) => {
   const n = parseInt(hex.slice(1), 16);
