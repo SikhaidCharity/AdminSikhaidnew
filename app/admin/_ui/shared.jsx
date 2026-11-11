@@ -314,3 +314,26 @@ export function useToast() {
   useEffect(() => () => clearTimeout(timer.current), []);
   return [message, show];
 }
+
+// "Donated Towards": General Fund plus every campaign by name. A saved value that is no longer
+// a campaign (an older entry) stays in the list so it isn't lost.
+export function CampaignSelect({ value, onChange, label = 'Donated Towards' }) {
+  const { items, error } = useCollection('campaigns');
+  const names = (items || [])
+    .filter((c) => c.publishStatus !== 'draft')
+    .sort((a, b) => Number(a.status === 'Completed') - Number(b.status === 'Completed'))
+    .map((c) => ({ title: c.title, done: c.status === 'Completed' }));
+  const known = ['General Fund', ...names.map((n) => n.title)];
+  return (
+    <Field label={label} hint={error ? 'Campaign list could not load. Showing General Fund only.' : undefined}>
+      <select value={value || 'General Fund'} onChange={(e) => onChange(e.target.value)}>
+        <option value="General Fund">General Fund</option>
+        {names.map((n) => (
+          <option key={n.title} value={n.title}>{n.title}{n.done ? ' (completed)' : ''}</option>
+        ))}
+        {value && !known.includes(value) && <option value={value}>{value}</option>}
+        {!items && !error && <option disabled>Loading campaigns…</option>}
+      </select>
+    </Field>
+  );
+}

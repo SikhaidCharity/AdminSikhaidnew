@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
 import {
-  Badge, ConfirmDelete, Field, LoadState, MediaInput, Modal, Notice, PageHead, Pager, Stats, Toast,
+  Badge, CampaignSelect, ConfirmDelete, Field, LoadState, MediaInput, Modal, Notice, PageHead, Pager, Stats, Toast,
   downloadCsv, formatDate, inr, useCollection, usePaged, useToast,
 } from '../_ui/shared';
 
@@ -303,7 +303,7 @@ function CertificateForm({ cert, onCancel, onSaved }) {
           </Field>
           <Field label="Payment Reference" hint="Transaction ID, cheque no. or receipt no."><input type="text" value={form.paymentRef} onChange={(e) => set('paymentRef', e.target.value)} /></Field>
         </div>
-        <Field label="Donated Towards"><input type="text" value={form.campaign} onChange={(e) => set('campaign', e.target.value)} /></Field>
+        <CampaignSelect value={form.campaign} onChange={(campaign) => set('campaign', campaign)} />
         {isNew && (
           <label className="adm-check">
             <input type="checkbox" checked={form.sendWhatsApp} onChange={(e) => set('sendWhatsApp', e.target.checked)} />

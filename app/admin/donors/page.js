@@ -3,13 +3,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
 import {
-  Badge, LoadState, Modal, PageHead, Pager, Stats,
-  downloadCsv, formatDate, inr, useCollection, usePaged,
+  Badge, Field, LoadState, Modal, PageHead, Pager, Stats, Toast,
+  downloadCsv, formatDate, inr, useCollection, usePaged, useToast,
 } from '../_ui/shared';
 
 // Every donor gets an account automatically when they donate: one per email (or phone).
 export default function DonorsPage() {
-  const { items, error, loading, reload } = useCollection('donors');
+  const { items, error, loading, reload, setItems } = useCollection('donors');
+  const [adding, setAdding] = useState(false);
+  const [toast, showToast] = useToast();
   const [query, setQuery] = useState('');
   const [perPage, setPerPage] = useState(25);
   const [open, setOpen] = useState(null);
@@ -36,7 +38,8 @@ export default function DonorsPage() {
 
   return (
     <main className="adm-page">
-      <PageHead title="Donors" subtitle="Every donor's account, made automatically from their donations.">
+      <PageHead title="Donors" subtitle="Every donor's account, made automatically from their donations. You can also add a donor by hand.">
+        <button type="button" className="adm-btn adm-btn-primary" onClick={() => setAdding(true)}>+ Add Donor</button>
         <button type="button" className="adm-btn" onClick={reload}>Refresh</button>
         <button type="button" className="adm-btn" onClick={exportRows} disabled={rows.length === 0}>Export</button>
       </PageHead>
@@ -101,11 +104,69 @@ export default function DonorsPage() {
       </section>
 
       {open && <DonorDetails donor={open} onClose={() => setOpen(null)} />}
+      {adding && (
+        <AddDonorForm
+          onCancel={() => setAdding(false)}
+          onSaved={(donor) => {
+            setAdding(false);
+            setItems((current) => [donor, ...(current || [])]);
+            showToast(`${donor.name} added`);
+          }}
+        />
+      )}
+      <Toast message={toast} />
     </main>
   );
 }
 
-const loginText = (d) => [d.google && 'Google', d.hasPassword && 'Password'].filter(Boolean).join(' + ') || 'Auto account';
+function AddDonorForm({ onCancel, onSaved }) {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', pan: '', address: '' });
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const set = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+
+  const save = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      onSaved(await adminApi.addDonor(form));
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      title="Add Donor"
+      onClose={onCancel}
+      footer={
+        <>
+          {error && <span className="adm-error adm-foot-error" role="alert">{error}</span>}
+          <button type="button" className="adm-btn" onClick={onCancel}>Cancel</button>
+          <button type="submit" form="donor-form" className="adm-btn adm-btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Add Donor'}</button>
+        </>
+      }
+    >
+      <form id="donor-form" className="adm-form" onSubmit={save}>
+        <p className="adm-hint">Add an email or a phone number (or both). If this person later donates on the website with the same email or phone, it joins this account.</p>
+        <Field label="Full Name *"><input type="text" value={form.name} onChange={(e) => set('name', e.target.value)} /></Field>
+        <div className="adm-grid-2">
+          <Field label="Email"><input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} /></Field>
+          <Field label="Phone"><input type="tel" placeholder="98765 43210" value={form.phone} onChange={(e) => set('phone', e.target.value)} /></Field>
+        </div>
+        <Field label="PAN" hint="Needed for 80G certificates.">
+          <input type="text" maxLength={10} placeholder="ABCDE1234F" value={form.pan} onChange={(e) => set('pan', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} />
+        </Field>
+        <Field label="Address"><textarea rows={2} value={form.address} onChange={(e) => set('address', e.target.value)} /></Field>
+      </form>
+    </Modal>
+  );
+}
+
+const loginText = (d) =>
+  [d.google && 'Google', d.hasPassword && 'Password'].filter(Boolean).join(' + ') || (d.source === 'manual' ? 'Added by admin' : 'Auto account');
 
 function DonorDetails({ donor, onClose }) {
   const [data, setData] = useState(null);
