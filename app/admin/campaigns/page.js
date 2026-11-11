@@ -338,7 +338,13 @@ function CampaignForm({ initial, onCancel, onSaved }) {
           <Field label="Donate-Page Message" hint="Short message under the highlight line.">
             <textarea rows={2} value={form.donateMessage || ''} onChange={(e) => set('donateMessage', e.target.value)} />
           </Field>
-          <DonateColorField value={form.donateColor || ''} ctaText={form.ctaText} onChange={(color) => set('donateColor', color)} />
+          <DonateColorField
+            value={form.donateColor || ''}
+            style={form.donateStyle === 'gradient' ? 'gradient' : 'solid'}
+            ctaText={form.ctaText}
+            onChange={(color) => set('donateColor', color)}
+            onStyle={(style) => set('donateStyle', style)}
+          />
         </Section>
 
         <Section title="Fundraising Progress">
@@ -421,8 +427,18 @@ const DONATE_COLORS = [
   ['#0F766E', 'Teal'],
   ['#6D28D9', 'Purple'],
 ];
-// The website's standard Donate colour when a campaign doesn't choose one. Always one solid colour, no gradient.
+// The website's standard Donate colour when a campaign doesn't choose one (same as lib/donate-color.js there).
 const STANDARD_COLOR = '#1650A8';
+const STANDARD_GRADIENT = 'linear-gradient(120deg, #0a1f5c 0%, #1650a8 60%, #3f8fdd 100%)';
+const darker = (hex, amount) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `#${[(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => Math.round(c * (1 - amount)).toString(16).padStart(2, '0')).join('')}`;
+};
+// What fills the Donate button on the website: the colour on its own, or a gradient of it.
+const fillOf = (color, style) => {
+  if (style === 'gradient') return color ? `linear-gradient(120deg, ${darker(color, 0.35)} 0%, ${color} 100%)` : STANDARD_GRADIENT;
+  return color || STANDARD_COLOR;
+};
 // Dark text on light colours, white text on dark ones.
 const textOn = (hex) => {
   const n = parseInt(String(hex).replace('#', ''), 16);
@@ -431,10 +447,15 @@ const textOn = (hex) => {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? '#121A4A' : '#fff';
 };
 
-function DonateColorField({ value, ctaText, onChange }) {
+function DonateColorField({ value, style, ctaText, onChange, onStyle }) {
   const custom = value && !DONATE_COLORS.some(([c]) => c.toLowerCase() === value.toLowerCase());
   return (
-    <Field label="Donate Button & Card Colour" hint="One solid colour for this campaign's Donate buttons and the selected amount and payment button on its donation card.">
+    <Field label="Donate Button & Card Colour" hint="Used for this campaign's Donate buttons, and the selected amount and Continue to Payment button on its donation card.">
+      <div className="adm-choice" role="radiogroup" aria-label="Donate button style">
+        {[['solid', 'Solid'], ['gradient', 'Gradient']].map(([id, label]) => (
+          <button key={id} type="button" role="radio" aria-checked={style === id} onClick={() => onStyle(id)}>{label}</button>
+        ))}
+      </div>
       <div className="adm-colors">
         {DONATE_COLORS.map(([color, name]) => (
           <button
@@ -452,7 +473,7 @@ function DonateColorField({ value, ctaText, onChange }) {
           <input type="color" aria-label="Pick any colour" value={value || '#1650A8'} onChange={(e) => onChange(e.target.value.toUpperCase())} />
           {!custom && <span aria-hidden="true">+</span>}
         </label>
-        <span className="adm-color-preview" style={{ background: value || STANDARD_COLOR, color: textOn(value || STANDARD_COLOR) }}>
+        <span className="adm-color-preview" style={{ background: fillOf(value, style), color: textOn(value || STANDARD_COLOR) }}>
           {ctaText || 'Donate Now'}
         </span>
       </div>
