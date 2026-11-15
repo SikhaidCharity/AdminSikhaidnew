@@ -132,6 +132,7 @@ export default function DonationsPage() {
                     </td>
                     <td className="adm-nowrap">
                       <b>{inr(d.grandTotal)}</b>
+                      {d.international && <small className="adm-sub">{d.currency} {Number(d.foreignTotal || 0).toLocaleString('en-IN')} · International</small>}
                       {d.isMonthly && <small className="adm-sub">Monthly</small>}
                     </td>
                     <td className="adm-small">{d.razorpayPaymentId || '—'}</td>
