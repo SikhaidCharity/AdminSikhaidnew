@@ -4,9 +4,20 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { adminApi } from '@/lib/admin-api';
 
+// Lists already loaded in this browser tab, so going back to a page shows it at once
+// while the fresh copy loads.
+const listCache = new Map();
+
 export function useCollection(name) {
-  const [items, setItems] = useState(null);
+  const [items, setItemsState] = useState(() => listCache.get(name) ?? null);
   const [error, setError] = useState('');
+  const setItems = useCallback((next) => {
+    setItemsState((prev) => {
+      const value = typeof next === 'function' ? next(prev) : next;
+      if (value) listCache.set(name, value);
+      return value;
+    });
+  }, [name]);
 
   const reload = useCallback(async () => {
     setError('');
@@ -15,7 +26,7 @@ export function useCollection(name) {
     } catch (e) {
       setError(e.message);
     }
-  }, [name]);
+  }, [name, setItems]);
 
   useEffect(() => {
     let current = true;
@@ -26,7 +37,7 @@ export function useCollection(name) {
     return () => {
       current = false;
     };
-  }, [name]);
+  }, [name, setItems]);
 
   return { items, error, reload, setItems, loading: items === null && !error };
 }
