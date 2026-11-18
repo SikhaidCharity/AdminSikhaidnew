@@ -5,8 +5,29 @@ import Link from 'next/link';
 import { adminApi } from '@/lib/admin-api';
 
 // Lists already loaded in this browser tab, so going back to a page shows it at once
-// while the fresh copy loads.
+// while the fresh copy loads. One request per list at a time, shared by whoever asks.
 const listCache = new Map();
+const inFlight = new Map();
+
+function fetchList(name) {
+  if (!inFlight.has(name)) {
+    const request = adminApi.list(name)
+      .then((data) => { listCache.set(name, data); return data; })
+      .finally(() => inFlight.delete(name));
+    inFlight.set(name, request);
+  }
+  return inFlight.get(name);
+}
+
+// Forgets every loaded list (on sign-out, so the next person doesn't see them).
+export function clearLists() {
+  listCache.clear();
+}
+
+// Loads lists in the background (after sign-in), so opening a section shows its data straight away.
+export function preloadLists(names) {
+  names.filter((n) => !listCache.has(n)).forEach((n, i) => setTimeout(() => fetchList(n).catch(() => {}), i * 150));
+}
 
 export function useCollection(name) {
   const [items, setItemsState] = useState(() => listCache.get(name) ?? null);
@@ -30,8 +51,7 @@ export function useCollection(name) {
 
   useEffect(() => {
     let current = true;
-    adminApi
-      .list(name)
+    fetchList(name)
       .then((data) => current && setItems(data))
       .catch((e) => current && setError(e.message));
     return () => {

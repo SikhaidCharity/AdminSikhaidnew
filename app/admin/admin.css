@@ -268,3 +268,18 @@
 .adm-dates { gap: 6px; }
 .adm-dates span { color: var(--a-muted); font-weight: 400; }
 .adm-link { background: none; border: 0; padding: 0 4px; color: #c2410c; font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
+
+/* Donations → Send */
+.adm-btn-sent { color: #0f7a3d; border-color: #9ed9b5; }
+.adm-send { display: grid; gap: 14px; }
+.adm-send-who { margin: 0; }
+.adm-send-options { display: grid; gap: 10px; }
+.adm-send-option { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 1.5px solid var(--a-line, #e2e6ef); border-radius: 12px; cursor: pointer; }
+.adm-send-option input { margin-top: 3px; accent-color: #121A4A; }
+.adm-send-option span { display: grid; gap: 2px; }
+.adm-send-option small { color: var(--a-muted, #5b6478); font-size: 13px; }
+.adm-send-option.is-on { border-color: #121A4A; background: #f3f5fb; }
+.adm-send-option.is-off { opacity: .6; cursor: not-allowed; }
+.adm-ok { margin: 0; color: #0f7a3d; font-weight: 600; }
+.adm-send .adm-notice { margin: 0; }
+.adm-send .adm-muted { margin: 0; color: var(--a-muted, #5b6478); font-size: 14px; }

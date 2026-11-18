@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
 import {
   LiveSyncNote, LoadState, Modal, Notice, PageHead, Pager, Stats,
@@ -35,6 +35,7 @@ export default function DonationsPage() {
   const [to, setTo] = useState('');
   const [perPage, setPerPage] = useState(25);
   const [open, setOpen] = useState(null);
+  const [sending, setSending] = useState(null);
   const sync = useLiveSync(reload);
 
   const all = useMemo(() => items || [], [items]);
@@ -163,6 +164,9 @@ export default function DonationsPage() {
                     <td className="adm-actions">
                       <button type="button" className="adm-btn adm-btn-small" onClick={() => setOpen(d)}>Details</button>
                       <a className="adm-btn adm-btn-small" href={adminApi.receipts.pdfUrl(d.id)} title="Receipt, plus the 80G certificate for ₹2,000 or more">PDF</a>
+                      <button type="button" className={`adm-btn adm-btn-small${d.whatsapp?.status === 'sent' ? ' adm-btn-sent' : ''}`} onClick={() => setSending(d)} title={whatsappText(d.whatsapp)}>
+                        {d.whatsapp?.status === 'sent' ? 'Sent ✓' : 'Send'}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -173,6 +177,17 @@ export default function DonationsPage() {
         <Pager page={page} pageCount={pageCount} total={rows.length} onPage={setPage} />
       </section>
 
+      {sending && (
+        <SendModal
+          donation={sending}
+          onClose={() => setSending(null)}
+          onSent={(d) => {
+            setItems((list) => list.map((x) => (x.id === d.id ? d : x)));
+            setOpen((o) => (o?.id === d.id ? d : o));
+          }}
+        />
+      )}
+
       {open && (
         <Modal
           title="Donor Lead Profile & Attribution"
@@ -180,7 +195,7 @@ export default function DonationsPage() {
           footer={
             <>
               <button type="button" className="adm-btn" onClick={() => setOpen(null)}>Close Details</button>
-              <SendButton donation={open} onSent={(d) => { setOpen(d); setItems((all) => all.map((x) => (x.id === d.id ? d : x))); }} />
+              <button type="button" className="adm-btn" onClick={() => setSending(open)}>Send on WhatsApp</button>
               <a className="adm-btn adm-btn-primary" href={adminApi.receipts.pdfUrl(open.id)}>Download PDF</a>
             </>
           }
@@ -222,23 +237,88 @@ const WA_TEXT = {
 const whatsappText = (wa) =>
   wa ? `${WA_TEXT[wa.status] || wa.status}${wa.included === 'receipt-and-80g' ? ': receipt + 80G' : wa.included === 'receipt' ? ': receipt' : ''}` : 'Not sent';
 
-function SendButton({ donation, onSent }) {
-  const [busy, setBusy] = useState(false);
+// Send the donor's PDF on WhatsApp: the receipt only, or the receipt with the 80G certificate.
+// The choice starts on what the amount allows (80G for the minimum amount or more, with a PAN).
+function SendModal({ donation, onClose, onSent }) {
+  const [options, setOptions] = useState(null);
+  const [include, setInclude] = useState('');
+  const [state, setState] = useState({ busy: false, error: '', result: null });
+
+  useEffect(() => {
+    let current = true;
+    adminApi.receipts.sendOptions(donation.id)
+      .then((o) => { if (current) { setOptions(o); setInclude(o.suggested); } })
+      .catch((e) => current && setState((s) => ({ ...s, error: e.message })));
+    return () => { current = false; };
+  }, [donation.id]);
+
+  const send = async () => {
+    setState({ busy: true, error: '', result: null });
+    try {
+      const updated = await adminApi.receipts.send(donation.id, include);
+      onSent(updated);
+      const wa = updated.whatsapp || {};
+      if (wa.status === 'sent') setState({ busy: false, error: '', result: whatsappText(wa) });
+      else setState({ busy: false, error: wa.error || whatsappText(wa), result: null });
+    } catch (e) {
+      setState({ busy: false, error: e.message, result: null });
+    }
+  };
+
+  const blocked = options && (!options.whatsappReady || !options.phone);
+  const pdfHref = `${adminApi.receipts.pdfUrl(donation.id, true)}${include === 'receipt' ? '&include=receipt' : ''}`;
+
   return (
-    <button
-      type="button"
-      className="adm-btn"
-      disabled={busy}
-      onClick={async () => {
-        setBusy(true);
-        try {
-          onSent(await adminApi.receipts.send(donation.id));
-        } catch {}
-        setBusy(false);
-      }}
+    <Modal
+      title="Send PDF on WhatsApp"
+      onClose={onClose}
+      footer={
+        <>
+          <button type="button" className="adm-btn" onClick={onClose}>{state.result ? 'Done' : 'Cancel'}</button>
+          {!state.result && (
+            <button type="button" className="adm-btn adm-btn-primary" onClick={send} disabled={!options || blocked || state.busy}>
+              {state.busy ? 'Sending…' : 'Send'}
+            </button>
+          )}
+        </>
+      }
     >
-      {busy ? 'Sending…' : 'Send on WhatsApp'}
-    </button>
+      <div className="adm-send">
+        <p className="adm-send-who">
+          <b>{donation.donor?.name || 'Donor'}</b> · {inr(donation.grandTotal)} · {donation.cause}
+          <small className="adm-sub">To WhatsApp: {options ? (options.phone ? `+${options.phone}` : 'no phone number') : donation.donor?.phone || '—'}</small>
+        </p>
+
+        {!options && !state.error && <p className="adm-muted">Checking what can be sent…</p>}
+
+        {options && (
+          <>
+            <div className="adm-send-options" role="radiogroup" aria-label="What to send">
+              <label className={`adm-send-option${include === 'receipt' ? ' is-on' : ''}`}>
+                <input type="radio" name="include" checked={include === 'receipt'} onChange={() => setInclude('receipt')} />
+                <span><b>Receipt only</b><small>The donation receipt.</small></span>
+              </label>
+              <label className={`adm-send-option${include === 'receipt-and-80g' ? ' is-on' : ''}${options.can80g ? '' : ' is-off'}`}>
+                <input type="radio" name="include" disabled={!options.can80g} checked={include === 'receipt-and-80g'} onChange={() => setInclude('receipt-and-80g')} />
+                <span>
+                  <b>Receipt + 80G certificate</b>
+                  <small>{options.can80g ? `One PDF with both${options.certNo ? ` (${options.certNo})` : ''}. For ${inr(options.minAmount)} or more.` : options.no80g}</small>
+                </span>
+              </label>
+            </div>
+            {!options.whatsappReady && <p className="adm-notice">WhatsApp is not connected yet. Missing setting: {options.whatsappMissing.join(', ')}.</p>}
+            {options.whatsappReady && !options.phone && <p className="adm-notice">This donation has no valid phone number.</p>}
+            {donation.whatsapp?.status === 'sent' && !state.result && (
+              <p className="adm-muted">Already sent {formatDate(donation.whatsapp.at, true)} ({whatsappText(donation.whatsapp)}). Sending again sends another copy.</p>
+            )}
+          </>
+        )}
+
+        {state.result && <p className="adm-ok" role="status">✓ {state.result} to +{options?.phone}</p>}
+        {state.error && <p className="adm-error" role="alert">Not sent: {state.error}</p>}
+        <a className="adm-link" href={pdfHref} target="_blank" rel="noreferrer">Preview the PDF</a>
+      </div>
+    </Modal>
   );
 }
 

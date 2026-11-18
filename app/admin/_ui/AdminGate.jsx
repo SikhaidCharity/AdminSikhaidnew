@@ -4,7 +4,16 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { adminApi } from '@/lib/admin-api';
-import { canUse, sectionForPath } from '@/lib/admin-sections';
+import { COLLECTION_SECTIONS, READ_ALSO, canUse, sectionForPath } from '@/lib/admin-sections';
+import { clearLists, preloadLists } from './shared';
+
+// The big lists, loaded in the background after sign-in (biggest first) so sections open instantly.
+const PRELOAD = ['donations', 'donors', 'submissions', 'campaigns', 'certificates', 'blogs'];
+// The signed-in user, remembered for this tab so a page reload doesn't wait on a sign-in check.
+const ME_KEY = 'sikhaid-admin-me';
+const rememberedMe = () => {
+  try { return JSON.parse(sessionStorage.getItem(ME_KEY) || 'null'); } catch { return null; }
+};
 
 const AdminContext = createContext({ user: null, name: '', can: () => false, signOut: () => {}, setUser: () => {} });
 export const useAdmin = () => useContext(AdminContext);
@@ -14,16 +23,34 @@ export default function AdminGate({ children }) {
   const [state, setState] = useState({ loading: true, user: null, configured: true });
 
   useEffect(() => {
+    // Show the panel at once for a user already signed in on this tab; the server still checks every request.
+    const remembered = rememberedMe();
+    if (remembered) setState({ loading: false, user: remembered, configured: true });
     adminApi
       .me()
       .then((me) => setState({ loading: false, user: me.signedIn ? me.user : null, configured: me.configured }))
-      .catch(() => setState({ loading: false, user: null, configured: true }));
+      .catch(() => setState((current) => (current.user ? current : { loading: false, user: null, configured: true })));
   }, []);
 
   const setUser = useCallback((user) => setState((current) => ({ ...current, user })), []);
 
+  // Remember the user for this tab, and start loading the lists they can open.
+  useEffect(() => {
+    try {
+      if (state.user) sessionStorage.setItem(ME_KEY, JSON.stringify(state.user));
+      else if (!state.loading) sessionStorage.removeItem(ME_KEY);
+    } catch {}
+    if (!state.user) return;
+    const user = state.user;
+    const allowed = (name) => [...(COLLECTION_SECTIONS[name] || []), ...(READ_ALSO[name] || [])].some((s) => canUse(user, s));
+    const start = () => preloadLists(PRELOAD.filter(allowed));
+    const idle = window.requestIdleCallback ? window.requestIdleCallback(start, { timeout: 1200 }) : setTimeout(start, 300);
+    return () => (window.cancelIdleCallback ? window.cancelIdleCallback(idle) : clearTimeout(idle));
+  }, [state.user, state.loading]);
+
   const signOut = async () => {
     await adminApi.signOut();
+    clearLists();
     setUser(null);
   };
 

@@ -9,6 +9,7 @@ export async function GET(request, { params }) {
   const { response: denied } = await guard(request, ['donations', 'monthly-donations', 'donors']);
   if (denied) return denied;
   const { id } = await params;
-  const file = await pdfForDonation(id);
+  const receiptOnly = new URL(request.url).searchParams.get('include') === 'receipt';
+  const file = await pdfForDonation(id, { withCertificate: !receiptOnly });
   return file ? pdfResponse(request, file) : notAvailable();
 }
