@@ -1,4 +1,4 @@
-import { cleanCertificateInput, createCertificate, getTrust, sendForCertificate, trustMissing, whatsappReady } from '@/lib/certificates';
+import { cleanCertificateInput, createCertificate, getTrust, sendForCertificate, trustMissing, whatsappMissing, whatsappReady } from '@/lib/certificates';
 import { isDisabled, notAvailable } from '@/lib/local-store';
 import { guard } from '@/lib/admin-users';
 
@@ -7,7 +7,7 @@ export async function GET(request) {
   if (isDisabled()) return notAvailable();
   const { response: denied } = await guard(request, ['80g']);
   if (denied) return denied;
-  return Response.json({ trustMissing: trustMissing(await getTrust()), whatsappReady: whatsappReady() });
+  return Response.json({ trustMissing: trustMissing(await getTrust()), whatsappReady: whatsappReady(), whatsappMissing: whatsappMissing() });
 }
 
 // Manual entry from the 80G admin page.
