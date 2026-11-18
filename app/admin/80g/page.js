@@ -50,7 +50,7 @@ export default function CertificatesPage() {
       )}
       {status && !status.whatsappReady && (
         <Notice>
-          WhatsApp is not connected yet, so certificates are saved here but not sent. Add the WhatsApp details to .env.local to switch sending on.
+          WhatsApp is not connected yet, so receipts and certificates are saved here but not sent. Add the GetGabs settings (GETGABS_API_KEY, GETGABS_TEMPLATE…) to .env.local and Vercel to switch sending on.
         </Notice>
       )}
 
