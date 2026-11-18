@@ -15,6 +15,10 @@ import {
 } from '@/lib/local-store';
 import { guard, sectionsForCollection } from '@/lib/admin-users';
 import { websiteOrigin } from '@/lib/paths';
+import { quickSync } from '@/lib/live-sync';
+
+// Lists that hold records from the live site: bring in anything new before showing them.
+const FROM_LIVE = new Set(['donations', 'submissions', 'donors']);
 
 // The website sends form entries and donations from its own address.
 const cors = () => ({
@@ -39,6 +43,7 @@ export async function GET(request, { params }) {
   if (isDisabled() || !isCollection(collection)) return notAvailable();
   const denied = await allowed(request, collection, false);
   if (denied) return denied;
+  if (FROM_LIVE.has(collection)) await quickSync().catch((err) => console.error('live quick sync failed', err));
   return Response.json(await readCollection(collection));
 }
 

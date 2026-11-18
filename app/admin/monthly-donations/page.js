@@ -3,8 +3,8 @@
 import { useMemo, useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
 import {
-  Badge, LoadState, Notice, PageHead, Pager, Stats, Toast,
-  downloadCsv, formatDate, inr, useCollection, usePaged, useToast,
+  Badge, LiveSyncNote, LoadState, Notice, PageHead, Pager, Stats, Toast,
+  downloadCsv, formatDate, inr, useCollection, useLiveSync, usePaged, useToast,
 } from '../_ui/shared';
 
 const STATUS = {
@@ -24,6 +24,7 @@ const nextDebit = (donation) => {
 
 export default function MonthlyDonationsPage() {
   const { items, error, loading, reload, setItems } = useCollection('donations');
+  const sync = useLiveSync(reload);
   const [statusFilter, setStatusFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [toast, showToast] = useToast();
@@ -74,7 +75,8 @@ export default function MonthlyDonationsPage() {
         <button type="button" className="adm-btn" onClick={exportRows} disabled={rows.length === 0}>Export CSV</button>
       </PageHead>
 
-      <Notice>Monthly sign-ups from the live site (sikhaid.ngo) are copied here every day at 6 am. Changing a status here only updates this record, not the Razorpay mandate.</Notice>
+      <LiveSyncNote sync={sync} what="Monthly sign-ups and charges" />
+      <Notice>Changing a status here only updates this record, not the Razorpay mandate.</Notice>
 
       <Stats
         items={[

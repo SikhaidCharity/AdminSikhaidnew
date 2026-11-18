@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
 import {
   Badge, ConfirmDelete, LoadState, Modal, PageHead, Pager, Stats, Toast,
-  downloadCsv, formatDate, useCollection, usePaged, useToast,
+  downloadCsv, formatDate, useCollection, useLiveSync, usePaged, useToast,
 } from '../_ui/shared';
 
 const TABS = [
@@ -43,6 +43,7 @@ const PER_PAGE = 15;
 
 export default function FormSubmissionsPage() {
   const { items, error, loading, reload, setItems } = useCollection('submissions');
+  useLiveSync(reload); // new entries from the live site appear on their own
   const [tabId, setTabId] = useState('contact');
   const [statusFilter, setStatusFilter] = useState('all');
   const [query, setQuery] = useState('');

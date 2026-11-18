@@ -4,12 +4,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
 import {
   Badge, Field, LoadState, Modal, PageHead, Pager, Stats, Toast,
-  downloadCsv, formatDate, inr, useCollection, usePaged, useToast,
+  downloadCsv, formatDate, inr, useCollection, useLiveSync, usePaged, useToast,
 } from '../_ui/shared';
 
 // Every donor gets an account automatically when they donate: one per email (or phone).
 export default function DonorsPage() {
   const { items, error, loading, reload, setItems } = useCollection('donors');
+  useLiveSync(reload); // new entries from the live site appear on their own
   const [adding, setAdding] = useState(false);
   const [toast, showToast] = useToast();
   const [query, setQuery] = useState('');

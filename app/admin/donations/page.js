@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
 import {
-  LoadState, Modal, Notice, PageHead, Pager, Stats,
-  downloadCsv, formatDate, inr, useCollection, usePaged,
+  LiveSyncNote, LoadState, Modal, Notice, PageHead, Pager, Stats,
+  downloadCsv, formatDate, inr, useCollection, useLiveSync, usePaged,
 } from '../_ui/shared';
 
 const PAID_MEDIUMS = /^(cpc|ppc|paid|paid_social|paid-social|display|ads?)$/i;
@@ -27,25 +27,7 @@ export default function DonationsPage() {
   const [utmFilter, setUtmFilter] = useState('all');
   const [perPage, setPerPage] = useState(25);
   const [open, setOpen] = useState(null);
-  const [sync, setSync] = useState({ last: null, busy: false, message: '' });
-
-  useEffect(() => {
-    adminApi.liveSync.last().then(({ last }) => setSync((s) => ({ ...s, last }))).catch(() => {});
-  }, []);
-
-  const syncNow = async () => {
-    setSync((s) => ({ ...s, busy: true, message: '' }));
-    try {
-      const r = await adminApi.liveSync.run();
-      const msg = r.newDonations || r.newForms || r.monthlyUpdated
-        ? `Added ${r.newDonations} donation${r.newDonations === 1 ? '' : 's'} (${inr(r.newAmount)}), ${r.newForms} form entr${r.newForms === 1 ? 'y' : 'ies'}; updated ${r.monthlyUpdated} monthly.`
-        : 'Already up to date.';
-      setSync({ last: r, busy: false, message: msg });
-      reload();
-    } catch (err) {
-      setSync((s) => ({ ...s, busy: false, message: err.message }));
-    }
-  };
+  const sync = useLiveSync(reload);
 
   const all = useMemo(() => items || [], [items]);
 
@@ -82,18 +64,14 @@ export default function DonationsPage() {
   return (
     <main className="adm-page">
       <PageHead title="Donations & Leads" subtitle="Every donation from the live site and the new donation card.">
-        <button type="button" className="adm-btn" onClick={syncNow} disabled={sync.busy}>
-          {sync.busy ? 'Getting latest…' : 'Get latest from live site'}
+        <button type="button" className="adm-btn" onClick={sync.checkAll} disabled={sync.busy}>
+          {sync.busy ? 'Checking…' : 'Check everything'}
         </button>
         <button type="button" className="adm-btn" onClick={reload}>Refresh</button>
         <button type="button" className="adm-btn" onClick={exportRows} disabled={rows.length === 0}>Export</button>
       </PageHead>
 
-      <Notice>
-        Donations from the live site (sikhaid.ngo) are copied here automatically every day at 6 am.
-        {sync.last ? ` Last copied: ${formatDate(sync.last.at)} ${new Date(sync.last.at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}.` : ''}
-        {sync.message ? ` ${sync.message}` : ''}
-      </Notice>
+      <LiveSyncNote sync={sync} />
 
       <Stats
         items={[

@@ -337,3 +337,57 @@ export function CampaignSelect({ value, onChange, label = 'Donated Towards' }) {
     </Field>
   );
 }
+
+// Keeps a page in step with the live site: checks for new payments and form entries every
+// 15 seconds while the page is open and visible, and calls onNew() when something arrived.
+export function useLiveSync(onNew) {
+  const [state, setState] = useState({ last: null, busy: false, message: '' });
+  const onNewRef = useRef(onNew);
+  onNewRef.current = onNew;
+
+  useEffect(() => {
+    let stop = false;
+    adminApi.liveSync.last().then(({ last }) => !stop && setState((s) => ({ ...s, last }))).catch(() => {});
+    const tick = async () => {
+      if (document.hidden) return;
+      try {
+        const r = await adminApi.liveSync.run();
+        if (stop) return;
+        if (r.last) setState((s) => ({ ...s, last: r.last }));
+        if (r.newDonations || r.newForms || r.monthlyUpdated) onNewRef.current?.(r);
+      } catch {}
+    };
+    const timer = setInterval(tick, 15000);
+    const onShow = () => !document.hidden && tick();
+    document.addEventListener('visibilitychange', onShow);
+    return () => { stop = true; clearInterval(timer); document.removeEventListener('visibilitychange', onShow); };
+  }, []);
+
+  // The full check (Donations → "Check everything").
+  const checkAll = async () => {
+    setState((s) => ({ ...s, busy: true, message: '' }));
+    try {
+      const r = await adminApi.liveSync.run(true);
+      const message = r.newDonations || r.newForms || r.monthlyUpdated
+        ? `Added ${r.newDonations} donation${r.newDonations === 1 ? '' : 's'} (${inr(r.newAmount)}), ${r.newForms} form entr${r.newForms === 1 ? 'y' : 'ies'}; updated ${r.monthlyUpdated} monthly.`
+        : 'Everything is already here.';
+      setState({ last: r.last || r, busy: false, message });
+      onNewRef.current?.(r);
+    } catch (err) {
+      setState((s) => ({ ...s, busy: false, message: err.message }));
+    }
+  };
+  return { ...state, checkAll };
+}
+
+const clock = (iso) => (iso ? new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '');
+export function LiveSyncNote({ sync, what = 'Donations' }) {
+  const checked = sync.last?.checkedAt || sync.last?.at;
+  return (
+    <Notice>
+      {what} from the live site (sikhaid.ngo) appear here automatically within seconds of being made.
+      {checked ? ` Last checked ${formatDate(checked)} ${clock(checked)}.` : ''}
+      {sync.message ? ` ${sync.message}` : ''}
+    </Notice>
+  );
+}
