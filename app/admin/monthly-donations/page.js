@@ -74,7 +74,7 @@ export default function MonthlyDonationsPage() {
         <button type="button" className="adm-btn" onClick={exportRows} disabled={rows.length === 0}>Export CSV</button>
       </PageHead>
 
-      <Notice>Test data only. Razorpay is not connected yet, so no monthly debit is set up. Changing a status here only updates this record.</Notice>
+      <Notice>Monthly sign-ups from the live site (sikhaid.ngo) are copied here every day at 6 am. Changing a status here only updates this record, not the Razorpay mandate.</Notice>
 
       <Stats
         items={[
