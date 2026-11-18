@@ -20,11 +20,19 @@ const UTM_FILTERS = [
 ];
 
 const DAY = 24 * 60 * 60 * 1000;
+// "2026-11-18" for a donation's date, in the admin's own time zone (matches the date pickers).
+const dayOf = (iso) => {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 export default function DonationsPage() {
   const { items, error, loading, reload, setItems } = useCollection('donations');
   const [query, setQuery] = useState('');
   const [utmFilter, setUtmFilter] = useState('all');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [perPage, setPerPage] = useState(25);
   const [open, setOpen] = useState(null);
   const sync = useLiveSync(reload);
@@ -36,6 +44,11 @@ export default function DonationsPage() {
     const filter = UTM_FILTERS.find((f) => f.id === utmFilter);
     return all.filter((d) => {
       if (!filter.test(d.utm || {})) return false;
+      if (from || to) {
+        const day = dayOf(d.createdAt);
+        if (from && day < from) return false;
+        if (to && day > to) return false;
+      }
       if (!q) return true;
       const donor = d.donor || {};
       return [donor.name, donor.email, donor.phone, donor.pan, d.receiptNo, d.cause, d.razorpayPaymentId]
@@ -43,7 +56,7 @@ export default function DonationsPage() {
         .toLowerCase()
         .includes(q);
     });
-  }, [all, query, utmFilter]);
+  }, [all, query, utmFilter, from, to]);
 
   const { rows: pageRows, page, pageCount, setPage } = usePaged(rows, perPage);
   const sum = (list, field) => list.reduce((total, d) => total + (Number(d[field]) || 0), 0);
@@ -75,10 +88,10 @@ export default function DonationsPage() {
 
       <Stats
         items={[
-          { label: 'Total Donations', value: all.length },
-          { label: 'Total Amount', value: inr(sum(all, 'grandTotal')) },
-          { label: 'SikhAid Support Earned', value: inr(sum(all, 'tipAmt')), hint: 'Included in Total Amount' },
-          { label: 'Last 30 Days', value: inr(sum(last30, 'grandTotal')) },
+          { label: 'Total Donations', value: all.length.toLocaleString('en-IN'), icon: 'heart' },
+          { label: 'Total Amount', value: inr(sum(all, 'grandTotal')), icon: 'rupee' },
+          { label: 'SikhAid Support Earned', value: inr(sum(all, 'tipAmt')), hint: 'Included in Total Amount', icon: 'support' },
+          { label: 'Last 30 Days', value: inr(sum(last30, 'grandTotal')), icon: 'calendar' },
         ]}
       />
 
@@ -91,6 +104,13 @@ export default function DonationsPage() {
               {UTM_FILTERS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
           </label>
+          <div className="adm-inline adm-dates">
+            Date
+            <input type="date" aria-label="From date" value={from} max={to || undefined} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+            <span>to</span>
+            <input type="date" aria-label="To date" value={to} min={from || undefined} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+            {(from || to) && <button type="button" className="adm-link" onClick={() => { setFrom(''); setTo(''); setPage(1); }}>Clear</button>}
+          </div>
           <label className="adm-inline">
             Per page
             <select value={perPage} onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}>

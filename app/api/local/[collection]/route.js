@@ -43,7 +43,8 @@ export async function GET(request, { params }) {
   if (isDisabled() || !isCollection(collection)) return notAvailable();
   const denied = await allowed(request, collection, false);
   if (denied) return denied;
-  if (FROM_LIVE.has(collection)) await quickSync().catch((err) => console.error('live quick sync failed', err));
+  // After the list is sent, so it doesn't wait; the page picks up anything new on its next check.
+  if (FROM_LIVE.has(collection)) after(() => quickSync().catch((err) => console.error('live quick sync failed', err)));
   return Response.json(await readCollection(collection));
 }
 

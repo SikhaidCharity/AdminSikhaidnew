@@ -75,14 +75,28 @@ export function PageHead({ title, subtitle, children }) {
   );
 }
 
+// Stat cards, colour-coded in turn (navy, green, purple, orange) with a coloured left border.
+// An item can set `tone` to pick a colour and `icon` (see STAT_ICONS) for a faint picture.
+const TONES = ['navy', 'green', 'purple', 'orange'];
+const STAT_ICONS = {
+  heart: <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />,
+  rupee: <path d="M7 5h10M7 9h10M9 5c4 0 6 1.6 6 4s-2 4-6 4H8l7 7" />,
+  support: <><circle cx="9" cy="8" r="3" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 11l2 2 4-4" /></>,
+  calendar: <><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M4 10h16M9 3v4M15 3v4" /></>,
+  users: <><circle cx="9" cy="8" r="3" /><circle cx="17" cy="9" r="2.5" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 14.5c3 0 6 1.8 6 5" /></>,
+  repeat: <path d="M17 2l4 4-4 4M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v1a4 4 0 0 1-4 4H3" />,
+};
 export function Stats({ items }) {
   return (
     <div className="adm-stats">
-      {items.map((item) => (
-        <div className="adm-stat" key={item.label}>
+      {items.map((item, i) => (
+        <div className={`adm-stat tone-${item.tone || TONES[i % TONES.length]}`} key={item.label}>
           <span>{item.label}</span>
           <b>{item.value}</b>
           {item.hint && <small>{item.hint}</small>}
+          {item.icon && STAT_ICONS[item.icon] && (
+            <svg className="adm-stat-icon" viewBox="0 0 24 24" aria-hidden="true">{STAT_ICONS[item.icon]}</svg>
+          )}
         </div>
       ))}
     </div>
@@ -357,10 +371,11 @@ export function useLiveSync(onNew) {
         if (r.newDonations || r.newForms || r.monthlyUpdated) onNewRef.current?.(r);
       } catch {}
     };
+    const first = setTimeout(tick, 1500);
     const timer = setInterval(tick, 15000);
     const onShow = () => !document.hidden && tick();
     document.addEventListener('visibilitychange', onShow);
-    return () => { stop = true; clearInterval(timer); document.removeEventListener('visibilitychange', onShow); };
+    return () => { stop = true; clearTimeout(first); clearInterval(timer); document.removeEventListener('visibilitychange', onShow); };
   }, []);
 
   // The full check (Donations → "Check everything").

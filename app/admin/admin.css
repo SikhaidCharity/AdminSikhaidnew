@@ -65,9 +65,15 @@
 .adm-notice { margin: 0 0 16px; padding: 12px 16px; border-radius: 12px; background: #fff4e5; color: #7a4305; font-weight: 500; }
 
 .adm-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 18px; }
-.adm-stat { background: #fff; border-radius: 14px; padding: 16px 18px; display: grid; gap: 4px; }
+.adm-stat { --tone: #121a4a; position: relative; background: #fff; border-radius: 14px; padding: 16px 18px 16px 20px; display: grid; gap: 4px; border-left: 5px solid var(--tone); box-shadow: 0 1px 2px rgba(18, 26, 74, .06); }
+.adm-stat.tone-navy { --tone: #121a4a; }
+.adm-stat.tone-green { --tone: #16a34a; }
+.adm-stat.tone-purple { --tone: #9333ea; }
+.adm-stat.tone-orange { --tone: #ea580c; }
+.adm-stat b { color: var(--tone); }
+.adm-stat-icon { position: absolute; top: 16px; right: 16px; width: 34px; height: 34px; fill: none; stroke: var(--tone); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: .28; }
 .adm-stat span { color: var(--a-muted); font-size: 13px; font-weight: 600; }
-.adm-stat b { font-family: var(--display); font-size: 26px; font-weight: 700; overflow-wrap: anywhere; }
+.adm-stat b { font-family: var(--display); font-size: 26px; font-weight: 700; overflow-wrap: anywhere; padding-right: 40px; }
 .adm-stat small { color: var(--a-muted); font-size: 12px; }
 
 .adm-tabs { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 14px; padding-bottom: 2px; }
@@ -258,3 +264,7 @@
 .adm-row-click:hover td, .adm-row-click:focus-visible td { background: #f5f7fc; }
 .adm-row-click:focus-visible { outline: 2px solid #1a237e; outline-offset: -2px; }
 .adm-h3 { margin: 22px 0 10px; font-size: 15px; font-weight: 800; color: #121a4a; }
+
+.adm-dates { gap: 6px; }
+.adm-dates span { color: var(--a-muted); font-weight: 400; }
+.adm-link { background: none; border: 0; padding: 0 4px; color: #c2410c; font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
