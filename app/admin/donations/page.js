@@ -27,6 +27,12 @@ const dayOf = (iso) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+// "05:22 pm" for a donation's time, shown small under its date.
+const timeOf = (iso) => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+};
+
 export default function DonationsPage() {
   const { items, error, loading, reload, setItems } = useCollection('donations');
   const [query, setQuery] = useState('');
@@ -148,7 +154,7 @@ export default function DonationsPage() {
                 {pageRows.map((d) => (
                   <tr key={d.id}>
                     <td className="adm-nowrap adm-small">{d.receiptNo}</td>
-                    <td className="adm-nowrap">{formatDate(d.createdAt)}</td>
+                    <td className="adm-nowrap">{formatDate(d.createdAt)}<small className="adm-sub">{timeOf(d.createdAt)}</small></td>
                     <td><b>{d.donor?.name || '—'}</b></td>
                     <td className="adm-nowrap">{d.donor?.phone || '—'}</td>
                     <td>
