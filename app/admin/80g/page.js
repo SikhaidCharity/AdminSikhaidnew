@@ -54,6 +54,8 @@ export default function CertificatesPage() {
         </Notice>
       )}
 
+      {status?.whatsappReady && <WhatsAppTest />}
+
       {tab === 'certificates' ? <CertificateList /> : <TrustForm onSaved={loadStatus} />}
     </main>
   );
@@ -388,5 +390,31 @@ function TrustForm({ onSaved }) {
       )}
       <Toast message={toast} />
     </>
+  );
+}
+
+// Sends a sample receipt (marked TEST RECORD) to one number, to check WhatsApp works. Saves nothing.
+function WhatsAppTest() {
+  const [phone, setPhone] = useState('');
+  const [state, setState] = useState({ busy: false, message: '' });
+  const send = async (e) => {
+    e.preventDefault();
+    setState({ busy: true, message: '' });
+    try {
+      const r = await adminApi.whatsappTest(phone);
+      setState({ busy: false, message: `Sent to +${r.to}. It should arrive on WhatsApp within a minute.` });
+    } catch (err) {
+      setState({ busy: false, message: `Not sent: ${err.message}` });
+    }
+  };
+  return (
+    <Notice>
+      <form onSubmit={send} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span>WhatsApp is connected. Send a sample receipt to check it:</span>
+        <input type="tel" placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} required style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #ccc' }} />
+        <button type="submit" className="adm-btn" disabled={state.busy}>{state.busy ? 'Sending…' : 'Send test'}</button>
+        {state.message && <span>{state.message}</span>}
+      </form>
+    </Notice>
   );
 }
