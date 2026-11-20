@@ -437,3 +437,65 @@ export function LiveSyncNote({ sync, what = 'Donations' }) {
     </Notice>
   );
 }
+
+// Shown on the sections whose changes appear on the website (campaigns, blogs, home page…).
+// Saving asks Vercel to rebuild the website, which takes about two minutes; this says whether the
+// last request worked, and lets an admin send one again.
+export function WebsiteStatus() {
+  const [state, setState] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(() => adminApi.website.status().then(setState).catch(() => {}), []);
+  useEffect(() => {
+    load();
+    const timer = setInterval(() => document.visibilityState === 'visible' && load(), 15000);
+    return () => clearInterval(timer);
+  }, [load]);
+
+  if (!state) return null;
+  const last = state.last;
+  const ago = last?.at ? formatDate(last.at, true) : '';
+  // Allow about 2 minutes for Vercel to rebuild.
+  const building = last?.ok && Date.now() - Date.parse(last.at) < 150000;
+
+  let tone = 'ok';
+  let text;
+  if (!state.hosted) text = 'On this computer: saved changes show on the local website straight away.';
+  else if (!state.hookSet) {
+    tone = 'bad';
+    text = 'Changes are saved, but the website cannot update: the website’s Deploy Hook (WEBSITE_DEPLOY_HOOK) is not set on this admin’s Vercel project.';
+  } else if (last && !last.ok) {
+    tone = 'bad';
+    text = `The last website update failed (${ago}): ${last.error}`;
+  } else if (building) text = `Website updating now, live in about 2 minutes (sent ${ago}).`;
+  else if (last) text = `Website up to date with changes saved before ${ago}.`;
+  else text = 'Saved changes appear on the website about 2 minutes after you save.';
+
+  const publish = async () => {
+    setBusy(true);
+    try {
+      const { last: result } = await adminApi.website.publish();
+      setState((s) => ({ ...s, last: result }));
+    } catch {}
+    setBusy(false);
+  };
+
+  return (
+    <div className={`adm-website adm-website-${tone}`} role="status">
+      <span>{text}</span>
+      {state.hosted && state.hookSet && (
+        <button type="button" className="adm-btn adm-btn-small" onClick={publish} disabled={busy}>
+          {busy ? 'Sending…' : 'Update website now'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// A page on the public website, for the "View" buttons. Set NEXT_PUBLIC_WEBSITE_URL to change it
+// (for example when the new website moves to www.sikhaid.ngo).
+export function siteLink(path = '/') {
+  const local = typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+  const base = process.env.NEXT_PUBLIC_WEBSITE_URL || (local ? 'http://localhost:3002' : 'https://new-sikhaid-website.vercel.app');
+  return base.replace(/\/$/, '') + path;
+}

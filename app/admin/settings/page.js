@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
 import { useAdmin } from '../_ui/AdminGate';
-import { Field, LoadState, PageHead, Toast, useCollection, useToast } from '../_ui/shared';
+import { Field, LoadState, PageHead, Toast, useCollection, useToast, WebsiteStatus } from '../_ui/shared';
 
 export default function SettingsPage() {
   const { can } = useAdmin();
@@ -12,6 +12,7 @@ export default function SettingsPage() {
   return (
     <main className="adm-page">
       <PageHead title="Settings" subtitle="Your sign-in details and the organisation's contact details shown on the website." />
+      <WebsiteStatus />
       <div className="adm-settings">
         <AccountForm showToast={showToast} />
         {can('settings') && <ProjectForm showToast={showToast} />}

@@ -5,8 +5,7 @@ import { getCampaignGallery, getCampaignStoryBlocks, getCampaignUpdates } from '
 import { adminApi } from '@/lib/admin-api';
 import {
   Badge, ConfirmDelete, Field, LoadState, MediaInput, Modal, PageHead, Pager, Stats, Toast,
-  SlugField, downloadCsv, formatDate, inr, slugify, useCollection, usePaged, useToast,
-} from '../_ui/shared';
+  SlugField, downloadCsv, formatDate, inr, slugify, useCollection, usePaged, useToast, WebsiteStatus, siteLink } from '../_ui/shared';
 
 const STATUSES = ['Ongoing', 'Active emergency', 'Completed', 'Seasonal'];
 const GROUPS = ['Emergency', 'Hunger', 'Healthcare', 'Women', 'Youth', 'Community'];
@@ -111,6 +110,7 @@ export default function CampaignsPage() {
         <button type="button" className="adm-btn" onClick={exportRows} disabled={rows.length === 0}>Export CSV</button>
         <button type="button" className="adm-btn adm-btn-primary" onClick={() => setEditing(toForm(emptyCampaign()))}>New Campaign</button>
       </PageHead>
+      <WebsiteStatus />
 
       <Stats
         items={[
@@ -175,7 +175,7 @@ export default function CampaignsPage() {
                     <td className="adm-nowrap">{formatDate(c.updatedAt)}</td>
                     <td className="adm-actions">
                       {publishOf(c) === 'published' && (
-                        <a className="adm-btn adm-btn-small" href={`/campaigns/${c.slug}`} target="_blank" rel="noreferrer">View</a>
+                        <a className="adm-btn adm-btn-small" href={siteLink(`/campaigns/${c.slug}`)} target="_blank" rel="noreferrer">View</a>
                       )}
                       <button type="button" className="adm-btn adm-btn-small" onClick={() => setEditing(toForm(c))}>Edit</button>
                       <button type="button" className="adm-btn adm-btn-small adm-btn-danger-line" onClick={() => setDeleting(c)}>Delete</button>

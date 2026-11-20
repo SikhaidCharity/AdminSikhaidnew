@@ -4,8 +4,7 @@ import { useMemo, useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
 import {
   Badge, ConfirmDelete, Field, LoadState, MediaInput, Modal, PageHead, Stats, Toast,
-  useCollection, useToast,
-} from '../_ui/shared';
+  useCollection, useToast, WebsiteStatus } from '../_ui/shared';
 
 // The "Support From" section on the home page has two parts, each with its own entries.
 const SECTIONS = [
@@ -32,6 +31,7 @@ export default function CelebritySupportPage() {
       <PageHead title="Celebrity Support" subtitle="Celebrities and personalities who have supported SikhAid, shown in the &quot;Support From&quot; section on the home page.">
         <a className="adm-btn" href="/#support-from" target="_blank" rel="noreferrer">View on home page</a>
       </PageHead>
+      <WebsiteStatus />
 
       <div className="adm-tabs" role="tablist" aria-label="Celebrity Support sections">
         {SECTIONS.map((s) => (

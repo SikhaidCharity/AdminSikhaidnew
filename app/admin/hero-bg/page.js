@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
-import { Field, LoadState, MediaInput, PageHead, Toast, useCollection, useToast } from '../_ui/shared';
+import { Field, LoadState, MediaInput, PageHead, Toast, useCollection, useToast, WebsiteStatus, siteLink } from '../_ui/shared';
 import { CampaignOrderSection, ImpactSection, ProcessSection, ReliefSection, saveHomePart } from './HomeSections';
 
 const TABS = [
@@ -32,8 +32,9 @@ export default function HomePageAdmin() {
   return (
     <main className="adm-page">
       <PageHead title="Home Page" subtitle="The hero at the top of the home page and the sections below it.">
-        <a className="adm-btn" href="/" target="_blank" rel="noreferrer">View home page</a>
+        <a className="adm-btn" href={siteLink('/')} target="_blank" rel="noreferrer">View home page</a>
       </PageHead>
+      <WebsiteStatus />
 
       <div className="adm-tabs" role="tablist" aria-label="Home page sections">
         {TABS.map(([id, label]) => (

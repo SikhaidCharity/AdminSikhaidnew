@@ -6,8 +6,7 @@ import BlogContent from '@/components/BlogContent';
 import { contentOf } from '@/lib/blog-format';
 import {
   Badge, ConfirmDelete, Field, LoadState, MediaInput, Modal, PageHead, Pager, Stats, Toast,
-  SlugField, formatDate, slugify, useCollection, usePaged, useToast,
-} from '../_ui/shared';
+  SlugField, formatDate, slugify, useCollection, usePaged, useToast, WebsiteStatus, siteLink } from '../_ui/shared';
 
 const CATEGORIES = ['Volunteer stories', 'Food security', 'Education', 'Disaster relief', 'Healthcare'];
 
@@ -42,9 +41,10 @@ export default function BlogsPage() {
   return (
     <main className="adm-page">
       <PageHead title="Blog Management" subtitle="Add, edit or delete the stories on the website.">
-        <a className="adm-btn" href="/blog" target="_blank" rel="noreferrer">View blog page</a>
+        <a className="adm-btn" href={siteLink('/blog')} target="_blank" rel="noreferrer">View blog page</a>
         <button type="button" className="adm-btn adm-btn-primary" onClick={() => setEditing(emptyBlog())}>New Blog</button>
       </PageHead>
+      <WebsiteStatus />
 
       <Stats
         items={[
@@ -100,7 +100,7 @@ export default function BlogsPage() {
                     <td className="adm-nowrap">{formatDate(b.createdAt)}</td>
                     <td className="adm-actions">
                       {b.status === 'published' && (
-                        <a className="adm-btn adm-btn-small" href={`/blog/${b.slug}`} target="_blank" rel="noreferrer">View</a>
+                        <a className="adm-btn adm-btn-small" href={siteLink(`/blog/${b.slug}`)} target="_blank" rel="noreferrer">View</a>
                       )}
                       <button type="button" className="adm-btn adm-btn-small" onClick={() => setEditing(b)}>Edit</button>
                       <button type="button" className="adm-btn adm-btn-small adm-btn-danger-line" onClick={() => setDeleting(b)}>Delete</button>

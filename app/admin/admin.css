@@ -283,3 +283,8 @@
 .adm-ok { margin: 0; color: #0f7a3d; font-weight: 600; }
 .adm-send .adm-notice { margin: 0; }
 .adm-send .adm-muted { margin: 0; color: var(--a-muted, #5b6478); font-size: 14px; }
+
+/* Website update status (content sections) */
+.adm-website { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 16px; padding: 12px 16px; border-radius: 12px; font-weight: 500; font-size: 14px; }
+.adm-website-ok { background: #e8f5ee; color: #12553a; }
+.adm-website-bad { background: #fdecea; color: #8a1c13; }
