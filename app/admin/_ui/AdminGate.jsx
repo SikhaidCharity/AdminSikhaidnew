@@ -123,7 +123,7 @@ function SignIn({ configured, onSignedIn }) {
         <button className="adm-btn adm-btn-primary adm-btn-block" type="submit" disabled={busy}>
           {busy ? 'Signing in…' : 'Access Admin Panel'}
         </button>
-        <small>Local test session, on this computer only</small>
+        <small>For SikhAid team members only</small>
       </form>
     </div>
   );
