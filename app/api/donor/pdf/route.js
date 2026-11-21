@@ -2,10 +2,11 @@
 import { pdfForDonationRecord } from '@/lib/certificates';
 import { getItem } from '@/lib/local-store';
 import { cors, donorAction, json, preflight } from '@/lib/donor-http';
+import { withSiteOrigin } from '@/lib/paths';
 
 export const OPTIONS = preflight;
 
-export async function GET(request) {
+async function handleGET(request) {
   const id = new URL(request.url).searchParams.get('donation') || '';
   return donorAction(request, true, async (donor) => {
     const donation = id ? await getItem('donations', id) : null;
@@ -16,3 +17,4 @@ export async function GET(request) {
     });
   });
 }
+export const GET = withSiteOrigin(handleGET);

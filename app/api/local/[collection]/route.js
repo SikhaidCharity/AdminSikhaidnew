@@ -15,7 +15,7 @@ import {
 } from '@/lib/local-store';
 import { guard, sectionsForCollection } from '@/lib/admin-users';
 import { donationView, donationVisible, redactDonation } from '@/lib/admin-sections';
-import { websiteOrigin } from '@/lib/paths';
+import { websiteOrigin, withSiteOrigin } from '@/lib/paths';
 import { quickSync } from '@/lib/live-sync';
 
 // Lists that hold records from the live site: bring in anything new before showing them.
@@ -29,7 +29,7 @@ const cors = () => ({
   Vary: 'Origin',
 });
 
-export function OPTIONS() {
+function handleOPTIONS() {
   return new Response(null, { status: 204, headers: cors() });
 }
 
@@ -59,7 +59,7 @@ export async function GET(request, { params }) {
 // payment (app/api/pay). Anything else needs sign-in.
 const PUBLIC_CLEANERS = { submissions: cleanSubmission };
 
-export async function POST(request, { params }) {
+async function handlePOST(request, { params }) {
   const { collection } = await params;
   if (isDisabled() || !isCollection(collection) || SINGLETONS.has(collection)) return notAvailable();
   const body = await request.json().catch(() => null);
@@ -107,3 +107,6 @@ export async function PUT(request, { params }) {
   if (!validShape) return Response.json({ error: 'Invalid data' }, { status: 400 });
   return Response.json(await replaceCollection(collection, body));
 }
+
+export const OPTIONS = withSiteOrigin(handleOPTIONS);
+export const POST = withSiteOrigin(handlePOST);

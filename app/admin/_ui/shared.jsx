@@ -496,6 +496,6 @@ export function WebsiteStatus() {
 // (for example when the new website moves to www.sikhaid.ngo).
 export function siteLink(path = '/') {
   const local = typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
-  const base = process.env.NEXT_PUBLIC_WEBSITE_URL || (local ? 'http://localhost:3002' : 'https://new-sikhaid-website.vercel.app');
+  const base = process.env.NEXT_PUBLIC_WEBSITE_URL || (local ? 'http://localhost:3002' : 'https://www.sikhaid.ngo');
   return base.replace(/\/$/, '') + path;
 }

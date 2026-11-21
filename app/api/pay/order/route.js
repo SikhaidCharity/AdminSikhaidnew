@@ -2,11 +2,12 @@
 import { startPayment } from '@/lib/donation-payments';
 import { PayError } from '@/lib/razorpay';
 import { json, preflight } from '@/lib/donor-http';
+import { withSiteOrigin } from '@/lib/paths';
 import { isDisabled } from '@/lib/local-store';
 
 export const OPTIONS = preflight;
 
-export async function POST(request) {
+async function handlePOST(request) {
   if (isDisabled()) return json({ error: 'Not found' }, 404);
   const body = await request.json().catch(() => null);
   try {
@@ -17,3 +18,4 @@ export async function POST(request) {
     return json({ error: 'Payment could not be started. Please try again.' }, 500);
   }
 }
+export const POST = withSiteOrigin(handlePOST);

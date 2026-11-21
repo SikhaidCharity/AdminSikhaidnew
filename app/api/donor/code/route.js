@@ -2,10 +2,12 @@
 // with { method: 'phone', phone, code }.
 import { sendLoginCode } from '@/lib/donor-otp';
 import { donorAction, json, preflight } from '@/lib/donor-http';
+import { withSiteOrigin } from '@/lib/paths';
 
 export const OPTIONS = preflight;
 
-export async function POST(request) {
+async function handlePOST(request) {
   const body = await request.json().catch(() => ({}));
   return donorAction(request, false, async () => json(await sendLoginCode(body.phone)));
 }
+export const POST = withSiteOrigin(handlePOST);

@@ -1,11 +1,12 @@
 // Donor sign-in: straight after a donation, with email + password, with Google, or with a WhatsApp code.
 import { publicDonor, sessionFor, signInWithDonation, signInWithGoogle, signInWithPassword } from '@/lib/donors';
 import { donorAction, json, preflight } from '@/lib/donor-http';
+import { withSiteOrigin } from '@/lib/paths';
 import { signInWithCode } from '@/lib/donor-otp';
 
 export const OPTIONS = preflight;
 
-export async function POST(request) {
+async function handlePOST(request) {
   const body = await request.json().catch(() => ({}));
   return donorAction(request, false, async () => {
     let donor;
@@ -16,3 +17,4 @@ export async function POST(request) {
     return json({ session: await sessionFor(donor.id), donor: publicDonor(donor) });
   });
 }
+export const POST = withSiteOrigin(handlePOST);

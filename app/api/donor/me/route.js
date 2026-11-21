@@ -2,6 +2,7 @@
 import { donationsOf, publicDonor, updateProfile } from '@/lib/donors';
 import { getTrust } from '@/lib/certificates';
 import { donorAction, json, preflight } from '@/lib/donor-http';
+import { withSiteOrigin } from '@/lib/paths';
 
 export const OPTIONS = preflight;
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ const publicDonation = (d, min) => {
   };
 };
 
-export async function GET(request) {
+async function handleGET(request) {
   return donorAction(request, true, async (donor) => {
     const min = Number((await getTrust()).minAmount) || 2000;
     const donations = (await donationsOf(donor.id)).map((d) => publicDonation(d, min));
@@ -33,7 +34,9 @@ export async function GET(request) {
   });
 }
 
-export async function PUT(request) {
+async function handlePUT(request) {
   const body = await request.json().catch(() => ({}));
   return donorAction(request, true, async (donor) => json({ donor: publicDonor(await updateProfile(donor, body)) }));
 }
+export const GET = withSiteOrigin(handleGET);
+export const PUT = withSiteOrigin(handlePUT);

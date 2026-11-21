@@ -3,12 +3,13 @@ import { after } from 'next/server';
 import { afterPaid, confirmPayment } from '@/lib/donation-payments';
 import { PayError } from '@/lib/razorpay';
 import { json, preflight } from '@/lib/donor-http';
+import { withSiteOrigin } from '@/lib/paths';
 import { isDisabled } from '@/lib/local-store';
 
 export const OPTIONS = preflight;
 export const maxDuration = 60;
 
-export async function POST(request) {
+async function handlePOST(request) {
   if (isDisabled()) return json({ error: 'Not found' }, 404);
   const body = await request.json().catch(() => ({}));
   try {
@@ -22,3 +23,4 @@ export async function POST(request) {
     return json({ error: 'We could not confirm the payment. Please contact us if money was taken.' }, 500);
   }
 }
+export const POST = withSiteOrigin(handlePOST);
