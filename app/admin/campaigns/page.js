@@ -99,8 +99,8 @@ export default function CampaignsPage() {
   const exportRows = () => {
     downloadCsv(
       'sikhaid-campaigns.csv',
-      ['Title', 'Category', 'Status', 'Publish Status', 'Raised', 'Goal', 'Donors', 'Updated'],
-      rows.map((c) => [c.title, c.category, c.status, publishOf(c), c.raised, c.goal, c.donors, formatDate(c.updatedAt)])
+      ['Title', 'Category', 'Status', 'Publish Status', 'Raised', 'Donors', 'Updated'],
+      rows.map((c) => [c.title, c.category, c.status, publishOf(c), c.raised, c.donors, formatDate(c.updatedAt)])
     );
   };
 
@@ -347,10 +347,9 @@ function CampaignForm({ initial, onCancel, onSaved }) {
           />
         </Section>
 
-        <Section title="Fundraising Progress">
+        <Section title="Raised So Far" hint="The website shows ‘₹ raised from N donors’. Every payment received after you save is added to these automatically.">
           <div className="adm-grid-4">
             <Field label="Raised (₹)"><input type="number" min="0" value={form.raised} onChange={(e) => set('raised', e.target.value)} /></Field>
-            <Field label="Goal (₹)"><input type="number" min="0" value={form.goal} onChange={(e) => set('goal', e.target.value)} /></Field>
             <Field label="Donors"><input type="number" min="0" value={form.donors} onChange={(e) => set('donors', e.target.value)} /></Field>
             <Field label="Days Left" hint="Blank if ongoing."><input type="number" min="0" value={form.days ?? ''} onChange={(e) => set('days', e.target.value)} /></Field>
           </div>
