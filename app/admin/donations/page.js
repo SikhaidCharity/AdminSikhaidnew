@@ -7,16 +7,20 @@ import {
   downloadCsv, formatDate, inr, useCollection, useLiveSync, usePaged,
 } from '../_ui/shared';
 
-const PAID_MEDIUMS = /^(cpc|ppc|paid|paid_social|paid-social|display|ads?)$/i;
+// Same rules as the live site's admin, so both show the same numbers.
+// Paid = the donation came with any UTM source, medium or campaign tag.
+const low = (v) => String(v || '').toLowerCase().trim();
+const utmParts = (u = {}) => ({ p: low(u.utm_source), l: low(u.utm_medium), m: low(u.utm_campaign) });
+const isPaid = (u) => { const { p, l, m } = utmParts(u); return Boolean(p || l || m); };
 
 const UTM_FILTERS = [
   { id: 'all', label: 'All Traffic', test: () => true },
-  { id: 'paid', label: 'All Paid Ads', test: (u) => PAID_MEDIUMS.test(u.utm_medium || '') },
-  { id: 'instagram', label: 'Instagram (ig / social)', test: (u) => /^(ig|instagram)$/i.test(u.utm_source || '') },
-  { id: 'google', label: 'Google Ads (google / cpc)', test: (u) => /google/i.test(u.utm_source || '') && PAID_MEDIUMS.test(u.utm_medium || '') },
-  { id: 'facebook', label: 'Facebook Ads (fb / meta)', test: (u) => /^(fb|facebook|meta)$/i.test(u.utm_source || '') },
-  { id: 'whatsapp', label: 'WhatsApp Outreach', test: (u) => /whatsapp|^wa$/i.test(u.utm_source || '') },
-  { id: 'organic', label: 'Organic / Direct', test: (u) => !u.utm_source },
+  { id: 'paid', label: 'All Paid Ads', test: isPaid },
+  { id: 'organic', label: 'Organic / Direct', test: (u) => !isPaid(u) },
+  { id: 'instagram', label: 'Instagram (ig / social)', test: (u) => { const { p, l, m } = utmParts(u); return p === 'ig' || p.startsWith('ig_') || p.endsWith('_ig') || p.includes('instagram') || l.includes('instagram') || m.startsWith('ig_') || m.includes('instagram'); } },
+  { id: 'google', label: 'Google Ads (google / cpc)', test: (u) => { const { p, l, m } = utmParts(u); return p.includes('google') || p.includes('g_ads') || p === 'cpc' || l.includes('cpc') || l.includes('search') || l.includes('google') || m.includes('google') || m.includes('g_ads') || m.includes('search_ads'); } },
+  { id: 'facebook', label: 'Facebook Ads (fb / meta)', test: (u) => { const { p, l, m } = utmParts(u); return p === 'fb' || p.startsWith('fb_') || p.endsWith('_fb') || p.includes('facebook') || p.includes('meta') || l.includes('facebook') || m.startsWith('fb_') || m.includes('facebook'); } },
+  { id: 'whatsapp', label: 'WhatsApp Outreach', test: (u) => { const { p, l, m } = utmParts(u); return p === 'wa' || p.startsWith('wa_') || p.endsWith('_wa') || p.includes('whatsapp') || l.includes('whatsapp') || m.startsWith('wa_') || m.includes('whatsapp'); } },
 ];
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -44,7 +48,8 @@ export default function DonationsPage() {
   const [sending, setSending] = useState(null);
   const sync = useLiveSync(reload);
 
-  const all = useMemo(() => items || [], [items]);
+  // Monthly sign-ups (mandates) are listed under Monthly Donations, as in the live site's admin.
+  const all = useMemo(() => (items || []).filter((d) => d.paymentStatus !== 'mandate'), [items]);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
