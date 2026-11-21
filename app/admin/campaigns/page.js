@@ -17,7 +17,7 @@ const emptyCampaign = () => ({
   title: '', subtitle: '', blurb: '', category: '', group: 'Emergency', type: 'flood', location: '',
   ctaText: 'Donate Now', donateMessage: '', donateHighlight: '', status: 'Ongoing', publishStatus: 'draft', urgent: false, hideRaised: false,
   raised: 0, goal: 100000, donors: 0, days: null, img: '', tone: '#3E5872',
-  donationAmounts: DEFAULT_AMOUNTS, suggestedAmount: 500, minAmount: 100,
+  donationAmounts: DEFAULT_AMOUNTS, suggestedAmount: 1500, minAmount: 100,
   quote: '', quoteAuthor: '',
 });
 
@@ -30,7 +30,7 @@ function toForm(campaign) {
   return {
     ...campaign,
     donationAmounts: campaign.donationAmounts || DEFAULT_AMOUNTS,
-    suggestedAmount: campaign.suggestedAmount ?? 500,
+    suggestedAmount: campaign.suggestedAmount ?? 1500,
     minAmount: campaign.minAmount ?? 100,
     ctaText: campaign.ctaText || 'Donate Now',
     publishStatus: campaign.publishStatus || 'published',
