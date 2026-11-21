@@ -48,8 +48,9 @@ export async function GET(request, { params }) {
   return Response.json(await readCollection(collection));
 }
 
-// Website visitors can only add a form entry or a donation record. Anything else needs sign-in.
-const PUBLIC_CLEANERS = { submissions: cleanSubmission, donations: cleanDonation };
+// Website visitors can only add a form entry. Donations are recorded only after Razorpay confirms the
+// payment (app/api/pay). Anything else needs sign-in.
+const PUBLIC_CLEANERS = { submissions: cleanSubmission };
 
 export async function POST(request, { params }) {
   const { collection } = await params;

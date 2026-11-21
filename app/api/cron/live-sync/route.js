@@ -1,4 +1,5 @@
 import { syncFromLive } from '@/lib/live-sync';
+import { sweepOpenOrders } from '@/lib/donation-payments';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,8 @@ export async function GET(request) {
     : (request.headers.get('user-agent') || '').startsWith('vercel-cron/');
   if (!ok) return Response.json({ error: 'Not allowed' }, { status: 401 });
   try {
-    return Response.json(await syncFromLive());
+    const [result, sweep] = await Promise.all([syncFromLive(), sweepOpenOrders().catch((e) => ({ error: e.message }))]);
+    return Response.json({ ...result, sweep });
   } catch (err) {
     console.error('live sync failed', err);
     return Response.json({ error: err.message }, { status: 500 });
