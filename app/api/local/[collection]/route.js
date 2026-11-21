@@ -14,6 +14,7 @@ import {
   replaceCollection,
 } from '@/lib/local-store';
 import { guard, sectionsForCollection } from '@/lib/admin-users';
+import { donationView, donationVisible, redactDonation } from '@/lib/admin-sections';
 import { websiteOrigin } from '@/lib/paths';
 import { quickSync } from '@/lib/live-sync';
 
@@ -41,11 +42,17 @@ async function allowed(request, collection, write) {
 export async function GET(request, { params }) {
   const { collection } = await params;
   if (isDisabled() || !isCollection(collection)) return notAvailable();
-  const denied = await allowed(request, collection, false);
+  const { user, response: denied } = await guard(request, sectionsForCollection(collection, { write: false }));
   if (denied) return denied;
   // After the list is sent, so it doesn't wait; the page picks up anything new on its next check.
   if (FROM_LIVE.has(collection)) after(() => quickSync().catch((err) => console.error('live quick sync failed', err)));
-  return Response.json(await readCollection(collection));
+  const list = await readCollection(collection);
+  // Donations: only what this user may see (User Management → Donations view).
+  if (collection === 'donations') {
+    const view = donationView(user);
+    return Response.json(list.filter((d) => donationVisible(d, view)).map((d) => redactDonation(d, view)));
+  }
+  return Response.json(list);
 }
 
 // Website visitors can only add a form entry. Donations are recorded only after Razorpay confirms the

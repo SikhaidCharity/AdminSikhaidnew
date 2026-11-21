@@ -246,6 +246,8 @@
 .adm-perm legend { float: left; width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 0; font-weight: 700; font-size: 14px; }
 .adm-perm legend + * { clear: both; }
 .adm-perm-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 16px; }
+.adm-perm-sub { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--a-line, rgba(0,0,0,.08)); }
+.adm-perm-sub > b { font-size: 13.5px; }
 @media (max-width: 720px) {
   .adm-perm-grid { grid-template-columns: 1fr 1fr; }
 }

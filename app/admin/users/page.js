@@ -2,13 +2,23 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
-import { ROLES, SECTIONS } from '@/lib/admin-sections';
+import { DONATION_VIEW, FULL_DONATION_VIEW, ROLES, SECTIONS } from '@/lib/admin-sections';
+import { UTM_SOURCES } from '@/lib/utm-filters';
 import { useAdmin } from '../_ui/AdminGate';
 import {
   Badge, ConfirmDelete, Field, LoadState, Modal, PageHead, Stats, Toast, formatDate, useToast,
 } from '../_ui/shared';
 
 const sectionLabel = Object.fromEntries(SECTIONS.map((s) => [s.key, s.label]));
+const DONATION_SECTIONS = ['donations', 'monthly-donations'];
+const seesDonations = (sections = []) => sections.some((s) => DONATION_SECTIONS.includes(s));
+// "Donations: no amount, no UTM" for the users table.
+function donationNote(u) {
+  if (u.role === 'admin' || !seesDonations(u.sections)) return '';
+  const hidden = DONATION_VIEW.filter((v) => u.donationView?.[v.key] === false).map((v) => v.label.replace('Donation ', '').toLowerCase());
+  const sources = (u.donationView?.utmSources || []).map((id) => UTM_SOURCES.find((f) => f.id === id)?.label).filter(Boolean);
+  return [hidden.length && `Donations hide: ${hidden.join(', ')}`, sources.length && `Only from: ${sources.join(', ')}`].filter(Boolean).join(' · ');
+}
 
 export default function UsersPage() {
   const { user: me } = useAdmin();
@@ -100,6 +110,7 @@ export default function UsersPage() {
                     <td className="adm-access">
                       {u.role === 'admin' ? 'Everything, including users'
                         : u.sections.map((s) => sectionLabel[s]).filter(Boolean).join(', ')}
+                      {donationNote(u) && <small className="adm-sub">{donationNote(u)}</small>}
                     </td>
                     <td>{u.active ? <Badge tone="green">Active</Badge> : <Badge tone="red">Switched off</Badge>}</td>
                     <td className="adm-nowrap">{u.lastLoginAt ? formatDate(u.lastLoginAt, true) : 'Never'}</td>
@@ -161,6 +172,7 @@ function UserModal({ initial, onClose, onSaved }) {
     email: initial.email || '',
     role: initial.role || 'editor',
     sections: initial.role === 'editor' ? initial.sections : [],
+    donationView: { ...FULL_DONATION_VIEW, utmSources: [], ...(initial.role === 'editor' ? initial.donationView : {}) },
     password: '',
     active: initial.active !== false,
   });
@@ -249,6 +261,47 @@ function UserModal({ initial, onClose, onSaved }) {
                 </label>
               ))}
             </div>
+          </fieldset>
+        )}
+
+        {form.role === 'editor' && seesDonations(form.sections) && (
+          <fieldset className="adm-perm">
+            <legend>In Donations and Monthly Donations, they can see</legend>
+            <div className="adm-perm-grid" style={{ gridTemplateColumns: '1fr' }}>
+              {DONATION_VIEW.map((v) => (
+                <label key={v.key} className="adm-check">
+                  <input
+                    type="checkbox"
+                    checked={form.donationView[v.key] !== false}
+                    onChange={(e) => set('donationView', { ...form.donationView, [v.key]: e.target.checked })}
+                  />
+                  <span>{v.label}<small className="adm-sub">{v.hint}</small></span>
+                </label>
+              ))}
+            </div>
+            <div className="adm-perm-sub">
+              <b>Which donations they can see, by ad source</b>
+              <small className="adm-sub">Tick none to show donations from every source. Tick one or more to show only those.</small>
+              <div className="adm-perm-grid">
+                {UTM_SOURCES.map((f) => {
+                  const list = form.donationView.utmSources || [];
+                  return (
+                    <label key={f.id} className="adm-check">
+                      <input
+                        type="checkbox"
+                        checked={list.includes(f.id)}
+                        onChange={(e) => set('donationView', {
+                          ...form.donationView,
+                          utmSources: e.target.checked ? [...list, f.id] : list.filter((id) => id !== f.id),
+                        })}
+                      />
+                      {f.label}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            <small className="adm-small">Unticked parts are hidden from them. Donor name, campaign and date always show.</small>
           </fieldset>
         )}
 

@@ -6,22 +6,9 @@ import {
   LiveSyncNote, LoadState, Modal, Notice, PageHead, Pager, Stats,
   downloadCsv, formatDate, inr, useCollection, useLiveSync, usePaged,
 } from '../_ui/shared';
-
-// Same rules as the live site's admin, so both show the same numbers.
-// Paid = the donation came with any UTM source, medium or campaign tag.
-const low = (v) => String(v || '').toLowerCase().trim();
-const utmParts = (u = {}) => ({ p: low(u.utm_source), l: low(u.utm_medium), m: low(u.utm_campaign) });
-const isPaid = (u) => { const { p, l, m } = utmParts(u); return Boolean(p || l || m); };
-
-const UTM_FILTERS = [
-  { id: 'all', label: 'All Traffic', test: () => true },
-  { id: 'paid', label: 'All Paid Ads', test: isPaid },
-  { id: 'organic', label: 'Organic / Direct', test: (u) => !isPaid(u) },
-  { id: 'instagram', label: 'Instagram (ig / social)', test: (u) => { const { p, l, m } = utmParts(u); return p === 'ig' || p.startsWith('ig_') || p.endsWith('_ig') || p.includes('instagram') || l.includes('instagram') || m.startsWith('ig_') || m.includes('instagram'); } },
-  { id: 'google', label: 'Google Ads (google / cpc)', test: (u) => { const { p, l, m } = utmParts(u); return p.includes('google') || p.includes('g_ads') || p === 'cpc' || l.includes('cpc') || l.includes('search') || l.includes('google') || m.includes('google') || m.includes('g_ads') || m.includes('search_ads'); } },
-  { id: 'facebook', label: 'Facebook Ads (fb / meta)', test: (u) => { const { p, l, m } = utmParts(u); return p === 'fb' || p.startsWith('fb_') || p.endsWith('_fb') || p.includes('facebook') || p.includes('meta') || l.includes('facebook') || m.startsWith('fb_') || m.includes('facebook'); } },
-  { id: 'whatsapp', label: 'WhatsApp Outreach', test: (u) => { const { p, l, m } = utmParts(u); return p === 'wa' || p.startsWith('wa_') || p.endsWith('_wa') || p.includes('whatsapp') || l.includes('whatsapp') || m.startsWith('wa_') || m.includes('whatsapp'); } },
-];
+import { useAdmin } from '../_ui/AdminGate';
+import { donationView } from '@/lib/admin-sections';
+import { UTM_FILTERS } from '@/lib/utm-filters';
 
 const DAY = 24 * 60 * 60 * 1000;
 // "2026-11-18" for a donation's date, in the admin's own time zone (matches the date pickers).
@@ -47,13 +34,17 @@ export default function DonationsPage() {
   const [open, setOpen] = useState(null);
   const [sending, setSending] = useState(null);
   const sync = useLiveSync(reload);
+  // What this user may see (User Management). The server also leaves out the hidden parts.
+  const { user } = useAdmin();
+  const view = donationView(user);
+  const canSend = view.details && view.amount;
 
   // Monthly sign-ups (mandates) are listed under Monthly Donations, as in the live site's admin.
   const all = useMemo(() => (items || []).filter((d) => d.paymentStatus !== 'mandate'), [items]);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const filter = UTM_FILTERS.find((f) => f.id === utmFilter);
+    const filter = (view.utm && UTM_FILTERS.find((f) => f.id === utmFilter)) || UTM_FILTERS[0];
     return all.filter((d) => {
       if (!filter.test(d.utm || {})) return false;
       if (from || to) {
@@ -68,22 +59,28 @@ export default function DonationsPage() {
         .toLowerCase()
         .includes(q);
     });
-  }, [all, query, utmFilter, from, to]);
+  }, [all, query, utmFilter, from, to, view.utm]);
 
   const { rows: pageRows, page, pageCount, setPage } = usePaged(rows, perPage);
   const sum = (list, field) => list.reduce((total, d) => total + (Number(d[field]) || 0), 0);
   const last30 = all.filter((d) => new Date(d.createdAt).getTime() >= new Date().getTime() - 30 * DAY);
 
+  // Only the columns this user may see.
   const exportRows = () => {
-    downloadCsv(
-      'sikhaid-donations.csv',
-      ['Receipt', 'Date', 'Donor Name', 'Email', 'Phone', 'PAN', 'Campaign', 'Payment Type', 'To the cause', 'Support to SikhAid', 'Total', 'Payment ID', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'UTM Term', 'UTM Content'],
-      rows.map((d) => [
-        d.receiptNo, formatDate(d.createdAt, true), d.donor?.name, d.donor?.email, d.donor?.phone, d.donor?.pan, d.cause,
-        d.isMonthly ? 'Monthly Recurring' : 'One-Time Donation', d.amount, d.tipAmt, d.grandTotal, d.razorpayPaymentId,
-        d.utm?.utm_source, d.utm?.utm_medium, d.utm?.utm_campaign, d.utm?.utm_term, d.utm?.utm_content,
-      ])
-    );
+    const cols = [
+      ['Receipt', (d) => d.receiptNo],
+      ['Date', (d) => formatDate(d.createdAt, true)],
+      ['Donor Name', (d) => d.donor?.name],
+      ...(view.details ? [['Email', (d) => d.donor?.email], ['Phone', (d) => d.donor?.phone], ['PAN', (d) => d.donor?.pan]] : []),
+      ['Campaign', (d) => d.cause],
+      ['Payment Type', (d) => (d.isMonthly ? 'Monthly Recurring' : 'One-Time Donation')],
+      ...(view.amount ? [['To the cause', (d) => d.amount], ['Support to SikhAid', (d) => d.tipAmt], ['Total', (d) => d.grandTotal]] : []),
+      ['Payment ID', (d) => d.razorpayPaymentId],
+      ...(view.utm
+        ? [['UTM Source', (d) => d.utm?.utm_source], ['UTM Medium', (d) => d.utm?.utm_medium], ['UTM Campaign', (d) => d.utm?.utm_campaign], ['UTM Term', (d) => d.utm?.utm_term], ['UTM Content', (d) => d.utm?.utm_content]]
+        : []),
+    ];
+    downloadCsv('sikhaid-donations.csv', cols.map((c) => c[0]), rows.map((d) => cols.map((c) => c[1](d))));
   };
 
   return (
@@ -101,21 +98,29 @@ export default function DonationsPage() {
       <Stats
         items={[
           { label: 'Total Donations', value: all.length.toLocaleString('en-IN'), icon: 'heart' },
-          { label: 'Total Amount', value: inr(sum(all, 'grandTotal')), icon: 'rupee' },
-          { label: 'SikhAid Support Earned', value: inr(sum(all, 'tipAmt')), hint: 'Included in Total Amount', icon: 'support' },
-          { label: 'Last 30 Days', value: inr(sum(last30, 'grandTotal')), icon: 'calendar' },
+          ...(view.amount
+            ? [
+                { label: 'Total Amount', value: inr(sum(all, 'grandTotal')), icon: 'rupee' },
+                { label: 'SikhAid Support Earned', value: inr(sum(all, 'tipAmt')), hint: 'Included in Total Amount', icon: 'support' },
+                { label: 'Last 30 Days', value: inr(sum(last30, 'grandTotal')), icon: 'calendar' },
+              ]
+            : [{ label: 'Last 30 Days', value: last30.length.toLocaleString('en-IN'), hint: 'Donations', icon: 'calendar' }]),
         ]}
       />
 
       <section className="adm-panel">
         <div className="adm-filters">
-          <input type="search" aria-label="Search donations" placeholder="Search name, email, phone, PAN, receipt…" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
+          <input type="search" aria-label="Search donations" placeholder={view.details ? 'Search name, email, phone, PAN, receipt…' : 'Search name, receipt, campaign…'} value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
+          {view.utm && (
           <label className="adm-inline">
             UTM Filter
             <select value={utmFilter} onChange={(e) => { setUtmFilter(e.target.value); setPage(1); }}>
-              {UTM_FILTERS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+              {UTM_FILTERS.filter((f) => f.id === 'all' || !view.utmSources.length || view.utmSources.includes(f.id)).map((f) => (
+                <option key={f.id} value={f.id}>{f.id === 'all' && view.utmSources.length ? 'All my sources' : f.label}</option>
+              ))}
             </select>
           </label>
+          )}
           <div className="adm-inline adm-dates">
             Date
             <input type="date" aria-label="From date" value={from} max={to || undefined} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
@@ -133,7 +138,8 @@ export default function DonationsPage() {
 
         {items && (
           <p className="adm-summary">
-            Filtered donations: <b>{rows.length}</b> · Filtered amount: <b>{inr(sum(rows, 'grandTotal'))}</b>
+            Filtered donations: <b>{rows.length}</b>
+            {view.amount && <> · Filtered amount: <b>{inr(sum(rows, 'grandTotal'))}</b></>}
           </p>
         )}
 
@@ -148,9 +154,9 @@ export default function DonationsPage() {
                   <th>Receipt</th>
                   <th>Date</th>
                   <th>Donor Name</th>
-                  <th>Phone</th>
-                  <th>Campaign / UTM</th>
-                  <th>Amount</th>
+                  {view.details && <th>Phone</th>}
+                  <th>{view.utm ? 'Campaign / UTM' : 'Campaign'}</th>
+                  {view.amount && <th>Amount</th>}
                   <th>Payment ID</th>
                   <th>Actions</th>
                 </tr>
@@ -161,23 +167,30 @@ export default function DonationsPage() {
                     <td className="adm-nowrap adm-small">{d.receiptNo}</td>
                     <td className="adm-nowrap">{formatDate(d.createdAt)}<small className="adm-sub">{timeOf(d.createdAt)}</small></td>
                     <td><b>{d.donor?.name || '—'}</b></td>
-                    <td className="adm-nowrap">{d.donor?.phone || '—'}</td>
+                    {view.details && <td className="adm-nowrap">{d.donor?.phone || '—'}</td>}
                     <td>
                       {d.cause}
-                      <small className="adm-sub">{d.utm?.utm_source ? `${d.utm.utm_source} / ${d.utm.utm_medium || '—'}` : 'Organic / Direct'}</small>
+                      {view.utm && <small className="adm-sub">{d.utm?.utm_source ? `${d.utm.utm_source} / ${d.utm.utm_medium || '—'}` : 'Organic / Direct'}</small>}
+                      {!view.amount && d.isMonthly && <small className="adm-sub">Monthly</small>}
                     </td>
-                    <td className="adm-nowrap">
+                    {view.amount && <td className="adm-nowrap">
                       <b>{inr(d.grandTotal)}</b>
                       {d.international && <small className="adm-sub">{d.currency} {Number(d.foreignTotal || 0).toLocaleString('en-IN')} · International</small>}
                       {d.isMonthly && <small className="adm-sub">Monthly</small>}
-                    </td>
+                    </td>}
                     <td className="adm-small">{d.razorpayPaymentId || '—'}</td>
                     <td className="adm-actions">
-                      <button type="button" className="adm-btn adm-btn-small" onClick={() => setOpen(d)}>Details</button>
-                      <a className="adm-btn adm-btn-small" href={adminApi.receipts.pdfUrl(d.id)} title="Receipt, plus the 80G certificate for ₹2,000 or more">PDF</a>
-                      <button type="button" className={`adm-btn adm-btn-small${d.whatsapp?.status === 'sent' ? ' adm-btn-sent' : ''}`} onClick={() => setSending(d)} title={whatsappText(d.whatsapp)}>
-                        {d.whatsapp?.status === 'sent' ? 'Sent ✓' : 'Send'}
-                      </button>
+                      {view.details ? (
+                        <button type="button" className="adm-btn adm-btn-small" onClick={() => setOpen(d)}>Details</button>
+                      ) : !canSend && <span className="adm-small">—</span>}
+                      {canSend && (
+                        <>
+                          <a className="adm-btn adm-btn-small" href={adminApi.receipts.pdfUrl(d.id)} title="Receipt, plus the 80G certificate for ₹2,000 or more">PDF</a>
+                          <button type="button" className={`adm-btn adm-btn-small${d.whatsapp?.status === 'sent' ? ' adm-btn-sent' : ''}`} onClick={() => setSending(d)} title={whatsappText(d.whatsapp)}>
+                            {d.whatsapp?.status === 'sent' ? 'Sent ✓' : 'Send'}
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -199,22 +212,22 @@ export default function DonationsPage() {
         />
       )}
 
-      {open && (
+      {open && view.details && (
         <Modal
           title="Donor Lead Profile & Attribution"
           onClose={() => setOpen(null)}
           footer={
             <>
               <button type="button" className="adm-btn" onClick={() => setOpen(null)}>Close Details</button>
-              <button type="button" className="adm-btn" onClick={() => setSending(open)}>Send on WhatsApp</button>
-              <a className="adm-btn adm-btn-primary" href={adminApi.receipts.pdfUrl(open.id)}>Download PDF</a>
+              {canSend && <button type="button" className="adm-btn" onClick={() => setSending(open)}>Send on WhatsApp</button>}
+              {canSend && <a className="adm-btn adm-btn-primary" href={adminApi.receipts.pdfUrl(open.id)}>Download PDF</a>}
             </>
           }
         >
           <dl className="adm-details adm-details-two">
-            <Row label="Donation Amount" value={inr(open.grandTotal)} />
-            <Row label="To the cause" value={inr(open.amount)} />
-            <Row label="Support to SikhAid" value={inr(open.tipAmt)} />
+            {view.amount && <Row label="Donation Amount" value={inr(open.grandTotal)} />}
+            {view.amount && <Row label="To the cause" value={inr(open.amount)} />}
+            {view.amount && <Row label="Support to SikhAid" value={inr(open.tipAmt)} />}
             <Row label="Payment Type" value={open.isMonthly ? 'Monthly Recurring' : 'One-Time Donation'} />
             <Row label="Campaign" value={open.cause} />
             <Row label="Receipt" value={open.receiptNo} />
@@ -226,11 +239,15 @@ export default function DonationsPage() {
             <Row label="Address" value={open.donor?.address} />
             <Row label="Wants an account" value={open.optAccount ? 'Yes' : 'No'} />
             <Row label="WhatsApp updates" value={open.optWa ? 'Yes' : 'No'} />
-            <Row label="UTM Source" value={open.utm?.utm_source} />
-            <Row label="UTM Medium" value={open.utm?.utm_medium} />
-            <Row label="Campaign Name" value={open.utm?.utm_campaign} />
-            <Row label="UTM Term / Keywords" value={open.utm?.utm_term} />
-            <Row label="UTM Content / Variant" value={open.utm?.utm_content} />
+            {view.utm && (
+              <>
+                <Row label="UTM Source" value={open.utm?.utm_source} />
+                <Row label="UTM Medium" value={open.utm?.utm_medium} />
+                <Row label="Campaign Name" value={open.utm?.utm_campaign} />
+                <Row label="UTM Term / Keywords" value={open.utm?.utm_term} />
+                <Row label="UTM Content / Variant" value={open.utm?.utm_content} />
+              </>
+            )}
           </dl>
         </Modal>
       )}

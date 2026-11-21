@@ -6,6 +6,8 @@ import {
   Badge, LiveSyncNote, LoadState, Notice, PageHead, Pager, Stats, Toast,
   downloadCsv, formatDate, inr, useCollection, useLiveSync, usePaged, useToast,
 } from '../_ui/shared';
+import { useAdmin } from '../_ui/AdminGate';
+import { donationView } from '@/lib/admin-sections';
 
 const STATUS = {
   pending: ['Pending Setup', 'orange'],
@@ -28,6 +30,9 @@ export default function MonthlyDonationsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [toast, showToast] = useToast();
+  // What this user may see (User Management). The server also leaves out the hidden parts.
+  const view = donationView(useAdmin().user);
+  const canPdf = view.details && view.amount;
 
   const monthly = useMemo(() => (items || []).filter((d) => d.isMonthly), [items]);
   const statusOf = (d) => d.mandateStatus || 'pending';
@@ -55,15 +60,20 @@ export default function MonthlyDonationsPage() {
     }
   };
 
+  // Only the columns this user may see.
   const exportRows = () => {
-    downloadCsv(
-      'sikhaid-monthly-donations.csv',
-      ['Date', 'Donor', 'Email', 'Phone', 'PAN', 'Campaign', 'Amount per month', 'Status', 'Receipt', 'Next', 'Subscription ID'],
-      rows.map((d) => [
-        formatDate(d.createdAt), d.donor?.name, d.donor?.email, d.donor?.phone, d.donor?.pan, d.cause, d.grandTotal,
-        STATUS[statusOf(d)][0], d.receiptNo, formatDate(nextDebit(d)), d.razorpaySubscriptionId,
-      ])
-    );
+    const cols = [
+      ['Date', (d) => formatDate(d.createdAt)],
+      ['Donor', (d) => d.donor?.name],
+      ...(view.details ? [['Email', (d) => d.donor?.email], ['Phone', (d) => d.donor?.phone], ['PAN', (d) => d.donor?.pan]] : []),
+      ['Campaign', (d) => d.cause],
+      ...(view.amount ? [['Amount per month', (d) => d.grandTotal]] : []),
+      ['Status', (d) => STATUS[statusOf(d)][0]],
+      ['Receipt', (d) => d.receiptNo],
+      ['Next', (d) => formatDate(nextDebit(d))],
+      ['Subscription ID', (d) => d.razorpaySubscriptionId],
+    ];
+    downloadCsv('sikhaid-monthly-donations.csv', cols.map((c) => c[0]), rows.map((d) => cols.map((c) => c[1](d))));
   };
 
   const hasFilters = statusFilter !== 'all' || query;
@@ -90,7 +100,7 @@ export default function MonthlyDonationsPage() {
 
       <section className="adm-panel">
         <div className="adm-filters">
-          <input type="search" aria-label="Search monthly donations" placeholder="Search name, email, phone, PAN…" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
+          <input type="search" aria-label="Search monthly donations" placeholder={view.details ? 'Search name, email, phone, PAN…' : 'Search name, campaign, receipt…'} value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
           <select aria-label="Filter by status" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}>
             <option value="all">All Statuses</option>
             {Object.entries(STATUS).map(([id, [label]]) => <option key={id} value={id}>{label}</option>)}
@@ -110,9 +120,9 @@ export default function MonthlyDonationsPage() {
                 <tr>
                   <th>Date</th>
                   <th>Donor</th>
-                  <th>Contact</th>
-                  <th>PAN</th>
-                  <th>Amount</th>
+                  {view.details && <th>Contact</th>}
+                  {view.details && <th>PAN</th>}
+                  {view.amount && <th>Amount</th>}
                   <th>Status</th>
                   <th>First Payment</th>
                   <th>Receipt</th>
@@ -130,16 +140,18 @@ export default function MonthlyDonationsPage() {
                         <b>{d.donor?.name || '—'}</b>
                         <small className="adm-sub">{d.cause}</small>
                       </td>
-                      <td>
-                        {d.donor?.phone || '—'}
-                        <small className="adm-sub">{d.donor?.email}</small>
-                      </td>
-                      <td className="adm-nowrap">{d.donor?.pan || '—'}</td>
-                      <td className="adm-nowrap"><b>{inr(d.grandTotal)}</b><small className="adm-sub">per month</small></td>
+                      {view.details && (
+                        <td>
+                          {d.donor?.phone || '—'}
+                          <small className="adm-sub">{d.donor?.email}</small>
+                        </td>
+                      )}
+                      {view.details && <td className="adm-nowrap">{d.donor?.pan || '—'}</td>}
+                      {view.amount && <td className="adm-nowrap"><b>{inr(d.grandTotal)}</b><small className="adm-sub">per month</small></td>}
                       <td><Badge tone={tone}>{label}</Badge></td>
                       <td className="adm-nowrap">{d.razorpayPaymentId ? formatDate(d.createdAt) : '—'}</td>
                       <td>
-                        <a className="adm-btn adm-btn-small" href={adminApi.receipts.pdfUrl(d.id)}>PDF</a>
+                        {canPdf ? <a className="adm-btn adm-btn-small" href={adminApi.receipts.pdfUrl(d.id)}>PDF</a> : '—'}
                       </td>
                       <td className="adm-nowrap">{formatDate(nextDebit(d))}</td>
                       <td>
