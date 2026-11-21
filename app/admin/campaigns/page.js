@@ -10,14 +10,14 @@ import {
 const STATUSES = ['Ongoing', 'Active emergency', 'Completed', 'Seasonal'];
 const GROUPS = ['Emergency', 'Hunger', 'Healthcare', 'Women', 'Youth', 'Community'];
 const TYPES = [['flood', 'Flood / disaster'], ['hunger', 'Hunger / langar'], ['health', 'Health'], ['youth', 'Youth'], ['community', 'Community']];
-const DEFAULT_AMOUNTS = [701, 1701, 2701, 5701];
+const DEFAULT_AMOUNTS = [500, 1500, 2500, 5000];
 const STORY_PARTS = [1, 2, 3];
 
 const emptyCampaign = () => ({
   title: '', subtitle: '', blurb: '', category: '', group: 'Emergency', type: 'flood', location: '',
   ctaText: 'Donate Now', donateMessage: '', donateHighlight: '', status: 'Ongoing', publishStatus: 'draft', urgent: false, hideRaised: false,
   raised: 0, goal: 100000, donors: 0, days: null, img: '', tone: '#3E5872',
-  donationAmounts: DEFAULT_AMOUNTS, suggestedAmount: 1701, minAmount: 100,
+  donationAmounts: DEFAULT_AMOUNTS, suggestedAmount: 500, minAmount: 100,
   quote: '', quoteAuthor: '',
 });
 
@@ -30,7 +30,7 @@ function toForm(campaign) {
   return {
     ...campaign,
     donationAmounts: campaign.donationAmounts || DEFAULT_AMOUNTS,
-    suggestedAmount: campaign.suggestedAmount ?? 1701,
+    suggestedAmount: campaign.suggestedAmount ?? 500,
     minAmount: campaign.minAmount ?? 100,
     ctaText: campaign.ctaText || 'Donate Now',
     publishStatus: campaign.publishStatus || 'published',
