@@ -15,7 +15,7 @@ const STORY_PARTS = [1, 2, 3];
 
 const emptyCampaign = () => ({
   title: '', subtitle: '', blurb: '', category: '', group: 'Emergency', type: 'flood', location: '',
-  ctaText: 'Donate Now', donateMessage: '', donateHighlight: '', status: 'Ongoing', publishStatus: 'draft', urgent: false,
+  ctaText: 'Donate Now', donateMessage: '', donateHighlight: '', status: 'Ongoing', publishStatus: 'draft', urgent: false, hideRaised: false,
   raised: 0, goal: 100000, donors: 0, days: null, img: '', tone: '#3E5872',
   donationAmounts: DEFAULT_AMOUNTS, suggestedAmount: 1701, minAmount: 100,
   quote: '', quoteAuthor: '',
@@ -340,6 +340,10 @@ function CampaignForm({ initial, onCancel, onSaved }) {
           <label className="adm-check">
             <input type="checkbox" checked={Boolean(form.urgent)} onChange={(e) => set('urgent', e.target.checked)} />
             Mark as an emergency (red badge)
+          </label>
+          <label className="adm-check">
+            <input type="checkbox" checked={!form.hideRaised} onChange={(e) => set('hideRaised', !e.target.checked)} />
+            Show money raised on the campaign page (amount, donors and bar). When off, trust points show there instead.
           </label>
           <MediaInput label="Main Campaign Image" value={form.img} onChange={(url) => set('img', url)} />
         </Section>
