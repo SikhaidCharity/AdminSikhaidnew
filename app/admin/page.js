@@ -34,7 +34,8 @@ export default function AdminDashboard() {
           <Link key={s.href} href={s.href} className="adm-pill">{s.label}</Link>
         ))}
         {can('users') && <Link href="/admin/users" className="adm-pill adm-pill-alt">User Management</Link>}
-        <Link href="/admin/settings" className="adm-pill adm-pill-alt">Settings</Link>
+        {/* Section Access users only see the sections they were given (Settings only if ticked for them). */}
+        {can('settings') && <Link href="/admin/settings" className="adm-pill adm-pill-alt">Settings</Link>}
       </nav>
     </main>
   );
