@@ -63,7 +63,15 @@ export default function DonationsPage() {
 
   const { rows: pageRows, page, pageCount, setPage } = usePaged(rows, perPage);
   const sum = (list, field) => list.reduce((total, d) => total + (Number(d[field]) || 0), 0);
-  const last30 = all.filter((d) => new Date(d.createdAt).getTime() >= new Date().getTime() - 30 * DAY);
+  // The cards follow the filters: the chosen dates, ad source and search (and only this user's sources).
+  const sourceRows = useMemo(() => {
+    const filter = (view.utm && UTM_FILTERS.find((f) => f.id === utmFilter)) || UTM_FILTERS[0];
+    return all.filter((d) => filter.test(d.utm || {}));
+  }, [all, utmFilter, view.utm]);
+  const last30 = sourceRows.filter((d) => new Date(d.createdAt).getTime() >= new Date().getTime() - 30 * DAY);
+  const filterName = utmFilter !== 'all' ? UTM_FILTERS.find((f) => f.id === utmFilter)?.label : view.utmSources.length ? 'All my sources' : 'All sources';
+  const dayText = (day) => formatDate(`${day}T12:00:00`);
+  const period = from && to ? (from === to ? dayText(from) : `${dayText(from)} – ${dayText(to)}`) : from ? `From ${dayText(from)}` : to ? `Up to ${dayText(to)}` : 'All dates';
 
   // Only the columns this user may see.
   const exportRows = () => {
@@ -97,14 +105,14 @@ export default function DonationsPage() {
 
       <Stats
         items={[
-          { label: 'Total Donations', value: all.length.toLocaleString('en-IN'), icon: 'heart' },
+          { label: 'Total Donations', value: rows.length.toLocaleString('en-IN'), hint: `${period} · ${filterName}`, icon: 'heart' },
           ...(view.amount
             ? [
-                { label: 'Total Amount', value: inr(sum(all, 'grandTotal')), icon: 'rupee' },
-                { label: 'SikhAid Support Earned', value: inr(sum(all, 'tipAmt')), hint: 'Included in Total Amount', icon: 'support' },
-                { label: 'Last 30 Days', value: inr(sum(last30, 'grandTotal')), icon: 'calendar' },
+                { label: 'Total Amount', value: inr(sum(rows, 'grandTotal')), hint: `${period} · ${filterName}`, icon: 'rupee' },
+                { label: 'SikhAid Support Earned', value: inr(sum(rows, 'tipAmt')), hint: 'Included in Total Amount', icon: 'support' },
+                { label: 'Last 30 Days', value: inr(sum(last30, 'grandTotal')), hint: filterName, icon: 'calendar' },
               ]
-            : [{ label: 'Last 30 Days', value: last30.length.toLocaleString('en-IN'), hint: 'Donations', icon: 'calendar' }]),
+            : [{ label: 'Last 30 Days', value: last30.length.toLocaleString('en-IN'), hint: `Donations · ${filterName}`, icon: 'calendar' }]),
         ]}
       />
 
