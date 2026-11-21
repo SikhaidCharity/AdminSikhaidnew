@@ -68,7 +68,8 @@ export default function CampaignsPage() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [publishFilter, setPublishFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('updatedAt');
+  // 'order' = the order the website shows them in (move with ↑ / ↓).
+  const [sortBy, setSortBy] = useState('order');
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [toast, showToast] = useToast();
@@ -85,10 +86,30 @@ export default function CampaignsPage() {
           (publishFilter === 'all' || publishOf(c) === publishFilter) &&
           (!q || `${c.title} ${c.category} ${c.location}`.toLowerCase().includes(q))
       )
-      .sort((a, b) => new Date(b[sortBy] || 0) - new Date(a[sortBy] || 0));
+      .sort((a, b) => (sortBy === 'order' ? 0 : new Date(b[sortBy] || 0) - new Date(a[sortBy] || 0)));
   }, [all, query, statusFilter, publishFilter, sortBy]);
 
-  const { rows: pageRows, page, pageCount, setPage } = usePaged(rows, 15);
+  // Moving campaigns needs the whole list in website order, with nothing filtered out.
+  const canReorder = sortBy === 'order' && !query.trim() && statusFilter === 'all' && publishFilter === 'all';
+  const { rows: pageRows, page, pageCount, setPage } = usePaged(rows, canReorder ? 1000 : 15);
+
+  const saveOrder = async (next) => {
+    const before = all;
+    setItems(next);
+    try {
+      await adminApi.saveAll('campaigns', next.map((c) => c.slug));
+      showToast('Order saved. The website updates in about a minute.');
+    } catch (e) {
+      setItems(before);
+      showToast(e.message);
+    }
+  };
+  const move = (index, to) => {
+    const next = all.slice();
+    const [item] = next.splice(index, 1);
+    next.splice(Math.max(0, Math.min(next.length, to)), 0, item);
+    saveOrder(next);
+  };
 
   const onSaved = (saved, isNew) => {
     setItems((current) => (isNew ? [saved, ...current] : current.map((c) => (c.slug === saved.slug ? saved : c))));
@@ -134,6 +155,7 @@ export default function CampaignsPage() {
             <option value="draft">Draft</option>
           </select>
           <select aria-label="Sort by" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            <option value="order">Website order</option>
             <option value="updatedAt">Updated Date</option>
             <option value="createdAt">Created Date</option>
           </select>
@@ -147,6 +169,7 @@ export default function CampaignsPage() {
             <table className="adm-table">
               <thead>
                 <tr>
+                  {canReorder && <th>Position</th>}
                   <th>Title</th>
                   <th>Category</th>
                   <th>Raised</th>
@@ -157,8 +180,18 @@ export default function CampaignsPage() {
                 </tr>
               </thead>
               <tbody>
-                {pageRows.map((c) => (
+                {pageRows.map((c, index) => (
                   <tr key={c.slug}>
+                    {canReorder && (
+                      <td className="adm-order-cell">
+                        <b>{index + 1}</b>
+                        <div className="adm-order-btns">
+                          <button type="button" className="adm-btn adm-btn-small" disabled={index === 0} onClick={() => move(index, 0)} title="Move to top" aria-label={`Move ${c.title} to the top`}>⤒</button>
+                          <button type="button" className="adm-btn adm-btn-small" disabled={index === 0} onClick={() => move(index, index - 1)} aria-label={`Move ${c.title} up`}>↑</button>
+                          <button type="button" className="adm-btn adm-btn-small" disabled={index === all.length - 1} onClick={() => move(index, index + 1)} aria-label={`Move ${c.title} down`}>↓</button>
+                        </div>
+                      </td>
+                    )}
                     <td className="adm-title-cell">
                       <div className="adm-with-thumb">
                         {c.img && (

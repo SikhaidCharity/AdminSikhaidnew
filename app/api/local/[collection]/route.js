@@ -87,6 +87,15 @@ export async function PUT(request, { params }) {
   const denied = await allowed(request, collection, true);
   if (denied) return denied;
   const body = await request.json().catch(() => null);
+  // Campaigns: the website order, sent as addresses only. Reordered from the saved records here,
+  // so a reorder never overwrites a campaign's details with an older copy.
+  if (collection === 'campaigns') {
+    if (!Array.isArray(body) || !body.every((s) => typeof s === 'string')) return Response.json({ error: 'Invalid order' }, { status: 400 });
+    const current = await readCollection('campaigns');
+    const rank = new Map(body.map((slug, i) => [slug, i]));
+    const ordered = current.slice().sort((a, b) => (rank.get(a.slug) ?? 1e6) - (rank.get(b.slug) ?? 1e6));
+    return Response.json(await replaceCollection('campaigns', ordered));
+  }
   const validShape = SINGLETONS.has(collection) ? body && !Array.isArray(body) : Array.isArray(body);
   if (!validShape) return Response.json({ error: 'Invalid data' }, { status: 400 });
   return Response.json(await replaceCollection(collection, body));

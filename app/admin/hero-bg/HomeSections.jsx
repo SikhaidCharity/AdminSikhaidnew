@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useMemo, useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
 import { Field, MediaInput, Toast, useToast } from '../_ui/shared';
@@ -84,39 +86,16 @@ export function ReliefSection({ home, campaigns, save }) {
   );
 }
 
-// Our Campaigns: the order the campaign cards appear in, first to last.
-export function CampaignOrderSection({ home, campaigns, save }) {
-  // Only campaigns the home page actually shows: published and not completed.
-  const shown = useMemo(() => campaigns.filter((c) => c.publishStatus !== 'draft' && c.status !== 'Completed'), [campaigns]);
-  const initial = useMemo(() => {
-    const order = home.campaignOrder || [];
-    const rank = (c) => (order.indexOf(c.slug) === -1 ? Number.MAX_SAFE_INTEGER : order.indexOf(c.slug));
-    return [...shown].sort((a, b) => rank(a) - rank(b)).map((c) => c.slug);
-  }, [home.campaignOrder, shown]);
-  const [order, setOrder] = useState(initial);
-  const titleOf = (slug) => shown.find((c) => c.slug === slug)?.title || slug;
-
+// Our Campaigns: the order is now set in one place, Campaigns → Website order (used by the home page too).
+export function CampaignOrderSection() {
   return (
-    <SectionForm
-      title="Our Campaigns"
-      about="The campaign cards on the home page, first to last. Use the arrows to move a campaign. Completed and draft campaigns are not shown on the home page."
-      value={order}
-      saved={initial}
-      onSave={() => save({ campaignOrder: order })}
-    >
-      <ol className="adm-order-list">
-        {order.map((slug, i) => (
-          <li key={slug}>
-            <span className="adm-order-num">{i + 1}</span>
-            <b>{titleOf(slug)}</b>
-            <div className="adm-row-buttons">
-              <button type="button" className="adm-btn adm-btn-small" disabled={i === 0} onClick={() => setOrder([slug, ...order.filter((s) => s !== slug)])}>Top</button>
-              <OrderButtons index={i} length={order.length} name={titleOf(slug)} onMove={(index, dir) => setOrder(moveItem(order, index, dir))} />
-            </div>
-          </li>
-        ))}
-      </ol>
-    </SectionForm>
+    <div className="adm-panel adm-panel-pad">
+      <h2 style={{ marginTop: 0 }}>Our Campaigns</h2>
+      <p>
+        The campaign cards on the home page now follow the same order as the Campaigns page. Change it in{' '}
+        <Link href="/admin/campaigns">Campaigns</Link>: choose <b>Website order</b> and use the ↑ / ↓ buttons.
+      </p>
+    </div>
   );
 }
 

@@ -288,3 +288,9 @@
 .adm-website { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 16px; padding: 12px 16px; border-radius: 12px; font-weight: 500; font-size: 14px; }
 .adm-website-ok { background: #e8f5ee; color: #12553a; }
 .adm-website-bad { background: #fdecea; color: #8a1c13; }
+
+/* Campaigns: website order */
+.adm-order-cell { white-space: nowrap; }
+.adm-order-cell b { display: inline-block; min-width: 22px; color: var(--a-ink, #121a4a); }
+.adm-order-btns { display: inline-flex; gap: 4px; margin-left: 6px; }
+.adm-order-btns .adm-btn { min-width: 32px; padding: 0 8px; }
