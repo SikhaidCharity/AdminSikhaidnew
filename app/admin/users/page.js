@@ -301,7 +301,7 @@ function UserModal({ initial, onClose, onSaved }) {
                 })}
               </div>
             </div>
-            <small className="adm-small">Unticked parts are hidden from them. Donor name, campaign and date always show.</small>
+            <small className="adm-small">Unticked parts are hidden from them. Date and campaign always show.</small>
           </fieldset>
         )}
 

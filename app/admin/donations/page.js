@@ -76,14 +76,13 @@ export default function DonationsPage() {
   // Only the columns this user may see.
   const exportRows = () => {
     const cols = [
-      ['Receipt', (d) => d.receiptNo],
+      ...(view.details ? [['Receipt', (d) => d.receiptNo]] : []),
       ['Date', (d) => formatDate(d.createdAt, true)],
-      ['Donor Name', (d) => d.donor?.name],
-      ...(view.details ? [['Email', (d) => d.donor?.email], ['Phone', (d) => d.donor?.phone], ['PAN', (d) => d.donor?.pan]] : []),
+      ...(view.details ? [['Donor Name', (d) => d.donor?.name], ['Email', (d) => d.donor?.email], ['Phone', (d) => d.donor?.phone], ['PAN', (d) => d.donor?.pan]] : []),
       ['Campaign', (d) => d.cause],
       ['Payment Type', (d) => (d.isMonthly ? 'Monthly Recurring' : 'One-Time Donation')],
       ...(view.amount ? [['To the cause', (d) => d.amount], ['Support to SikhAid', (d) => d.tipAmt], ['Total', (d) => d.grandTotal]] : []),
-      ['Payment ID', (d) => d.razorpayPaymentId],
+      ...(view.details ? [['Payment ID', (d) => d.razorpayPaymentId]] : []),
       ...(view.utm
         ? [['UTM Source', (d) => d.utm?.utm_source], ['UTM Medium', (d) => d.utm?.utm_medium], ['UTM Campaign', (d) => d.utm?.utm_campaign], ['UTM Term', (d) => d.utm?.utm_term], ['UTM Content', (d) => d.utm?.utm_content]]
         : []),
@@ -118,7 +117,7 @@ export default function DonationsPage() {
 
       <section className="adm-panel">
         <div className="adm-filters">
-          <input type="search" aria-label="Search donations" placeholder={view.details ? 'Search name, email, phone, PAN, receipt…' : 'Search name, receipt, campaign…'} value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
+          <input type="search" aria-label="Search donations" placeholder={view.details ? 'Search name, email, phone, PAN, receipt…' : 'Search campaign…'} value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
           {view.utm && (
           <label className="adm-inline">
             UTM Filter
@@ -159,22 +158,22 @@ export default function DonationsPage() {
             <table className="adm-table">
               <thead>
                 <tr>
-                  <th>Receipt</th>
+                  {view.details && <th>Receipt</th>}
                   <th>Date</th>
-                  <th>Donor Name</th>
+                  {view.details && <th>Donor Name</th>}
                   {view.details && <th>Phone</th>}
                   <th>{view.utm ? 'Campaign / UTM' : 'Campaign'}</th>
                   {view.amount && <th>Amount</th>}
-                  <th>Payment ID</th>
-                  <th>Actions</th>
+                  {view.details && <th>Payment ID</th>}
+                  {view.details && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {pageRows.map((d) => (
                   <tr key={d.id}>
-                    <td className="adm-nowrap adm-small">{d.receiptNo}</td>
+                    {view.details && <td className="adm-nowrap adm-small">{d.receiptNo}</td>}
                     <td className="adm-nowrap">{formatDate(d.createdAt)}<small className="adm-sub">{timeOf(d.createdAt)}</small></td>
-                    <td><b>{d.donor?.name || '—'}</b></td>
+                    {view.details && <td><b>{d.donor?.name || '—'}</b></td>}
                     {view.details && <td className="adm-nowrap">{d.donor?.phone || '—'}</td>}
                     <td>
                       {d.cause}
@@ -186,11 +185,9 @@ export default function DonationsPage() {
                       {d.international && <small className="adm-sub">{d.currency} {Number(d.foreignTotal || 0).toLocaleString('en-IN')} · International</small>}
                       {d.isMonthly && <small className="adm-sub">Monthly</small>}
                     </td>}
-                    <td className="adm-small">{d.razorpayPaymentId || '—'}</td>
-                    <td className="adm-actions">
-                      {view.details ? (
-                        <button type="button" className="adm-btn adm-btn-small" onClick={() => setOpen(d)}>Details</button>
-                      ) : !canSend && <span className="adm-small">—</span>}
+                    {view.details && <td className="adm-small">{d.razorpayPaymentId || '—'}</td>}
+                    {view.details && <td className="adm-actions">
+                      <button type="button" className="adm-btn adm-btn-small" onClick={() => setOpen(d)}>Details</button>
                       {canSend && (
                         <>
                           <a className="adm-btn adm-btn-small" href={adminApi.receipts.pdfUrl(d.id)} title="Receipt, plus the 80G certificate for ₹2,000 or more">PDF</a>
@@ -199,7 +196,7 @@ export default function DonationsPage() {
                           </button>
                         </>
                       )}
-                    </td>
+                    </td>}
                   </tr>
                 ))}
               </tbody>

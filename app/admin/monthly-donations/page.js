@@ -64,14 +64,13 @@ export default function MonthlyDonationsPage() {
   const exportRows = () => {
     const cols = [
       ['Date', (d) => formatDate(d.createdAt)],
-      ['Donor', (d) => d.donor?.name],
-      ...(view.details ? [['Email', (d) => d.donor?.email], ['Phone', (d) => d.donor?.phone], ['PAN', (d) => d.donor?.pan]] : []),
+      ...(view.details ? [['Donor', (d) => d.donor?.name], ['Email', (d) => d.donor?.email], ['Phone', (d) => d.donor?.phone], ['PAN', (d) => d.donor?.pan]] : []),
       ['Campaign', (d) => d.cause],
       ...(view.amount ? [['Amount per month', (d) => d.grandTotal]] : []),
       ['Status', (d) => STATUS[statusOf(d)][0]],
-      ['Receipt', (d) => d.receiptNo],
+      ...(view.details ? [['Receipt', (d) => d.receiptNo]] : []),
       ['Next', (d) => formatDate(nextDebit(d))],
-      ['Subscription ID', (d) => d.razorpaySubscriptionId],
+      ...(view.details ? [['Subscription ID', (d) => d.razorpaySubscriptionId]] : []),
     ];
     downloadCsv('sikhaid-monthly-donations.csv', cols.map((c) => c[0]), rows.map((d) => cols.map((c) => c[1](d))));
   };
@@ -100,7 +99,7 @@ export default function MonthlyDonationsPage() {
 
       <section className="adm-panel">
         <div className="adm-filters">
-          <input type="search" aria-label="Search monthly donations" placeholder={view.details ? 'Search name, email, phone, PAN…' : 'Search name, campaign, receipt…'} value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
+          <input type="search" aria-label="Search monthly donations" placeholder={view.details ? 'Search name, email, phone, PAN…' : 'Search campaign…'} value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
           <select aria-label="Filter by status" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}>
             <option value="all">All Statuses</option>
             {Object.entries(STATUS).map(([id, [label]]) => <option key={id} value={id}>{label}</option>)}
@@ -119,13 +118,13 @@ export default function MonthlyDonationsPage() {
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Donor</th>
+                  <th>{view.details ? 'Donor' : 'Campaign'}</th>
                   {view.details && <th>Contact</th>}
                   {view.details && <th>PAN</th>}
                   {view.amount && <th>Amount</th>}
                   <th>Status</th>
                   <th>First Payment</th>
-                  <th>Receipt</th>
+                  {canPdf && <th>Receipt</th>}
                   <th>Next</th>
                   <th>Change Status</th>
                 </tr>
@@ -137,8 +136,12 @@ export default function MonthlyDonationsPage() {
                     <tr key={d.id}>
                       <td className="adm-nowrap">{formatDate(d.createdAt)}</td>
                       <td>
-                        <b>{d.donor?.name || '—'}</b>
-                        <small className="adm-sub">{d.cause}</small>
+                        {view.details ? (
+                          <>
+                            <b>{d.donor?.name || '—'}</b>
+                            <small className="adm-sub">{d.cause}</small>
+                          </>
+                        ) : d.cause}
                       </td>
                       {view.details && (
                         <td>
@@ -149,13 +152,15 @@ export default function MonthlyDonationsPage() {
                       {view.details && <td className="adm-nowrap">{d.donor?.pan || '—'}</td>}
                       {view.amount && <td className="adm-nowrap"><b>{inr(d.grandTotal)}</b><small className="adm-sub">per month</small></td>}
                       <td><Badge tone={tone}>{label}</Badge></td>
-                      <td className="adm-nowrap">{d.razorpayPaymentId ? formatDate(d.createdAt) : '—'}</td>
-                      <td>
-                        {canPdf ? <a className="adm-btn adm-btn-small" href={adminApi.receipts.pdfUrl(d.id)}>PDF</a> : '—'}
-                      </td>
+                      <td className="adm-nowrap">{d.razorpayPaymentId || d.paid ? formatDate(d.createdAt) : '—'}</td>
+                      {canPdf && (
+                        <td>
+                          <a className="adm-btn adm-btn-small" href={adminApi.receipts.pdfUrl(d.id)}>PDF</a>
+                        </td>
+                      )}
                       <td className="adm-nowrap">{formatDate(nextDebit(d))}</td>
                       <td>
-                        <select aria-label={`Change status for ${d.donor?.name}`} value={statusOf(d)} onChange={(e) => changeStatus(d, e.target.value)}>
+                        <select aria-label={`Change status for ${d.donor?.name || d.cause}`} value={statusOf(d)} onChange={(e) => changeStatus(d, e.target.value)}>
                           {Object.entries(STATUS).map(([id, [text]]) => <option key={id} value={id}>{text}</option>)}
                         </select>
                       </td>
