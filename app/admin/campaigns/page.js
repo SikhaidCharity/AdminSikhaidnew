@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { getCampaignGallery, getCampaignStoryBlocks, getCampaignUpdates } from '@/lib/campaign-defaults';
+import { CARD_LINES, getCampaignGallery, getCampaignStoryBlocks, getCampaignUpdates } from '@/lib/campaign-defaults';
 import { adminApi } from '@/lib/admin-api';
 import {
   Badge, ConfirmDelete, Field, LoadState, MediaInput, Modal, PageHead, Pager, Stats, Toast,
@@ -33,6 +33,7 @@ function toForm(campaign) {
     suggestedAmount: campaign.suggestedAmount ?? 1500,
     minAmount: campaign.minAmount ?? 100,
     ctaText: campaign.ctaText || 'Donate Now',
+    cardLine: campaign.cardLine || CARD_LINES[campaign.slug] || '',
     publishStatus: campaign.publishStatus || 'published',
     story,
     gallery,
@@ -55,6 +56,9 @@ function toRecord(form) {
     suggestedAmount: Number(form.suggestedAmount) || 0,
     minAmount: Number(form.minAmount) || 100,
   };
+  // The standard card line isn't saved, so it can still be improved later for every campaign.
+  record.cardLine = String(form.cardLine || '').trim();
+  if (record.cardLine === CARD_LINES[form.slug]) record.cardLine = '';
   if (changed(story, original.story)) record.storyOverride = story;
   if (changed(gallery, original.gallery)) record.gallery = gallery;
   if (changed(updates, original.updates)) {
@@ -308,6 +312,9 @@ function CampaignForm({ initial, onCancel, onSaved }) {
             base="/campaigns/"
             onChange={(slug) => { setSlugEdited(true); set('slug', slug); }}
           />
+          <Field label="Card line" hint="One line under the title on the campaign cards (home page and campaigns page), e.g. “Your support can help us provide langar every day.”">
+            <input type="text" maxLength={90} value={form.cardLine || ''} onChange={(e) => set('cardLine', e.target.value)} />
+          </Field>
           <Field label="Subtitle"><input type="text" value={form.subtitle || ''} onChange={(e) => set('subtitle', e.target.value)} /></Field>
           <Field label="Short Description *" hint="The top banner shows its first two sentences.">
             <textarea rows={3} value={form.blurb || ''} onChange={(e) => set('blurb', e.target.value)} />
