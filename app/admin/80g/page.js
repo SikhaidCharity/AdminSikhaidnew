@@ -55,6 +55,7 @@ export default function CertificatesPage() {
       )}
 
       {status?.whatsappReady && <WhatsAppTest />}
+      {status?.whatsappReady && <CatchUp />}
 
       {tab === 'certificates' ? <CertificateList /> : <TrustForm onSaved={loadStatus} />}
     </main>
@@ -415,6 +416,62 @@ function WhatsAppTest() {
         <button type="submit" className="adm-btn" disabled={state.busy}>{state.busy ? 'Sending…' : 'Send test'}</button>
         {state.message && <span>{state.message}</span>}
       </form>
+    </Notice>
+  );
+}
+
+// Older donations (copied from the old website) that never got their 80G certificate:
+// one button makes each certificate and sends it with the receipt on WhatsApp, a few at a time.
+function CatchUp() {
+  const [info, setInfo] = useState(null);
+  const [run, setRun] = useState({ busy: false, sent: 0, notSent: 0, message: '' });
+  const [stop, setStop] = useState(false);
+  const stopRef = useMemo(() => ({ current: false }), []);
+
+  const load = useCallback(() => {
+    adminApi.certificates.catchUpStatus().then(setInfo).catch(() => setInfo(null));
+  }, []);
+  useEffect(load, [load]);
+
+  const start = async () => {
+    if (!window.confirm(`Make the 80G certificate for ${info.waiting.toLocaleString('en-IN')} older donations and send each donor their receipt and certificate on WhatsApp?`)) return;
+    stopRef.current = false;
+    setStop(false);
+    let sent = 0;
+    let notSent = 0;
+    setRun({ busy: true, sent, notSent, message: '' });
+    try {
+      for (;;) {
+        const r = await adminApi.certificates.catchUpNext();
+        sent += r.sent;
+        notSent += r.notSent;
+        setRun({ busy: true, sent, notSent, message: `${r.left.toLocaleString('en-IN')} left…` });
+        if (!r.left || stopRef.current || r.sent + r.notSent === 0) break;
+      }
+      setRun({ busy: false, sent, notSent, message: stopRef.current ? 'Stopped.' : 'Done.' });
+    } catch (err) {
+      setRun({ busy: false, sent, notSent, message: `Stopped: ${err.message}` });
+    }
+    load();
+  };
+
+  if (!info || (!info.waiting && !run.sent && !run.notSent)) return null;
+  return (
+    <Notice>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span>
+          <strong>{info.waiting.toLocaleString('en-IN')}</strong> older donations of {inr(info.minAmount)} or more (with a PAN) have no 80G certificate yet.
+          {info.noPan > 0 && <> {info.noPan.toLocaleString('en-IN')} more have no PAN, so they can&apos;t get one.</>}
+        </span>
+        {run.busy ? (
+          <button type="button" className="adm-btn" disabled={stop} onClick={() => { stopRef.current = true; setStop(true); }}>{stop ? 'Stopping…' : 'Stop'}</button>
+        ) : (
+          info.waiting > 0 && <button type="button" className="adm-btn" onClick={start}>Make and send all</button>
+        )}
+        {(run.busy || run.message) && (
+          <span>Sent {run.sent.toLocaleString('en-IN')}{run.notSent ? `, not sent ${run.notSent.toLocaleString('en-IN')} (see Certificates)` : ''}. {run.message}</span>
+        )}
+      </div>
     </Notice>
   );
 }
