@@ -434,7 +434,7 @@ function CatchUp() {
   useEffect(load, [load]);
 
   const start = async () => {
-    if (!window.confirm(`Make the 80G certificate for ${info.waiting.toLocaleString('en-IN')} older donations and send each donor their receipt and certificate on WhatsApp?`)) return;
+    if (!window.confirm(`Make the 80G certificate for ${info.waiting.toLocaleString('en-IN')} donations since ${formatDate(info.from)} and send each donor their receipt and certificate on WhatsApp?`)) return;
     stopRef.current = false;
     setStop(false);
     let sent = 0;
@@ -460,7 +460,7 @@ function CatchUp() {
     <Notice>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <span>
-          <strong>{info.waiting.toLocaleString('en-IN')}</strong> older donations of {inr(info.minAmount)} or more (with a PAN) have no 80G certificate yet.
+          <strong>{info.waiting.toLocaleString('en-IN')}</strong> donations of {inr(info.minAmount)} or more (with a PAN) since {formatDate(info.from)} have no 80G certificate yet.
           {info.noPan > 0 && <> {info.noPan.toLocaleString('en-IN')} more have no PAN, so they can&apos;t get one.</>}
         </span>
         {run.busy ? (
