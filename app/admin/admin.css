@@ -269,6 +269,11 @@
 
 .adm-dates { gap: 6px; }
 .adm-dates span { color: var(--a-muted); font-weight: 400; }
+/* Quick date buttons on Donations: one tap picks Today, Yesterday or the last 7 to 30 days. */
+.adm-quick-days { display: flex; flex-wrap: wrap; gap: 6px; flex-basis: 100%; }
+.adm-quick-days button { border: 1px solid var(--a-line); background: #fff; color: inherit; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.adm-quick-days button:hover { border-color: var(--a-ink); }
+.adm-quick-days button[aria-pressed="true"] { background: var(--a-ink); border-color: var(--a-ink); color: #fff; }
 .adm-link { background: none; border: 0; padding: 0 4px; color: #c2410c; font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
 
 /* Donations → Send */

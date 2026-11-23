@@ -11,6 +11,11 @@ import { donationView } from '@/lib/admin-sections';
 import { UTM_FILTERS } from '@/lib/utm-filters';
 
 const DAY = 24 * 60 * 60 * 1000;
+// Quick date buttons: [label, first day back, last day back] (0 = today). "7 days" is today and the 6 before.
+const QUICK_DAYS = [
+  ['Today', 0, 0], ['Yesterday', 1, 1],
+  ...[7, 10, 15, 20, 25, 30].map((n) => [`${n} days`, n - 1, 0]),
+];
 // "2026-11-18" for a donation's date, in the admin's own time zone (matches the date pickers).
 const dayOf = (iso) => {
   const d = new Date(iso);
@@ -30,6 +35,8 @@ export default function DonationsPage() {
   const [utmFilter, setUtmFilter] = useState('all');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  // When the page opened: the quick date buttons count back from it.
+  const [now] = useState(() => Date.now());
   const [perPage, setPerPage] = useState(25);
   const [open, setOpen] = useState(null);
   const [sending, setSending] = useState(null);
@@ -134,6 +141,18 @@ export default function DonationsPage() {
             <span>to</span>
             <input type="date" aria-label="To date" value={to} min={from || undefined} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
             {(from || to) && <button type="button" className="adm-link" onClick={() => { setFrom(''); setTo(''); setPage(1); }}>Clear</button>}
+          </div>
+          <div className="adm-quick-days" role="group" aria-label="Quick dates">
+            {QUICK_DAYS.map(([label, back, end]) => {
+              const start = dayOf(new Date(now - back * DAY));
+              const stop = dayOf(new Date(now - end * DAY));
+              const on = from === start && to === stop;
+              return (
+                <button key={label} type="button" aria-pressed={on} onClick={() => { setFrom(on ? '' : start); setTo(on ? '' : stop); setPage(1); }}>
+                  {label}
+                </button>
+              );
+            })}
           </div>
           <label className="adm-inline">
             Per page
