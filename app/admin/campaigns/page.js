@@ -17,7 +17,7 @@ const emptyCampaign = () => ({
   title: '', subtitle: '', blurb: '', category: '', group: 'Emergency', type: 'flood', location: '',
   ctaText: 'Donate Now', donateMessage: '', donateHighlight: '', status: 'Ongoing', publishStatus: 'draft', urgent: false, hideRaised: false,
   raised: 0, goal: 100000, donors: 0, days: null, img: '', tone: '#3E5872',
-  donationAmounts: DEFAULT_AMOUNTS, suggestedAmount: 2500, minAmount: 100,
+  donationAmounts: DEFAULT_AMOUNTS, suggestedAmount: 2500, minAmount: 300,
   quote: '', quoteAuthor: '',
 });
 
@@ -31,7 +31,7 @@ function toForm(campaign) {
     ...campaign,
     donationAmounts: campaign.donationAmounts || DEFAULT_AMOUNTS,
     suggestedAmount: campaign.suggestedAmount ?? 2500,
-    minAmount: campaign.minAmount ?? 100,
+    minAmount: !campaign.minAmount || Number(campaign.minAmount) === 100 ? 300 : campaign.minAmount,
     ctaText: campaign.ctaText || 'Donate Now',
     cardLine: campaign.cardLine || CARD_LINES[campaign.slug] || '',
     publishStatus: campaign.publishStatus || 'published',
@@ -54,7 +54,7 @@ function toRecord(form) {
     days: form.days === '' || form.days === null ? null : Number(form.days),
     donationAmounts: form.donationAmounts.map(Number),
     suggestedAmount: Number(form.suggestedAmount) || 0,
-    minAmount: Number(form.minAmount) || 100,
+    minAmount: Number(form.minAmount) || 300,
   };
   // The standard card line isn't saved, so it can still be improved later for every campaign.
   record.cardLine = String(form.cardLine || '').trim();
