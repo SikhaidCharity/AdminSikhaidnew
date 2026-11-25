@@ -72,6 +72,7 @@ export default function ExtraOptPage() {
       ['Page', (d) => d.causeSlug],
       ['Offer', (d) => EXTRA_OFFERS[d.extra.offer]?.label || d.extra.offer],
       ['Choice', (d) => (d.extra.accepted ? 'Opted in' : 'Opted out')],
+      ['Test payment', (d) => (d.extra.test ? 'Yes' : '')],
       ['Quantity', (d) => d.extra.qty || 0],
       ...(view.amount ? [['Extra amount', (d) => d.extra.amount || 0], ['Donation total', (d) => d.grandTotal]] : []),
       ...(view.utm ? [['UTM source', (d) => d.utm?.utm_source || ''], ['UTM medium', (d) => d.utm?.utm_medium || ''], ['UTM campaign', (d) => d.utm?.utm_campaign || '']] : []),
@@ -174,7 +175,7 @@ export default function ExtraOptPage() {
                     <td className="adm-nowrap">{formatDate(d.createdAt)}</td>
                     <td>{d.cause}<small className="adm-sub">{d.causeSlug}</small></td>
                     <td>{EXTRA_OFFERS[d.extra.offer]?.label || d.extra.offer}</td>
-                    <td><b style={{ color: d.extra.accepted ? '#1e6b40' : '#5b617c' }}>{d.extra.accepted ? 'Opted in' : 'Opted out'}</b></td>
+                    <td><b style={{ color: d.extra.accepted ? '#1e6b40' : '#5b617c' }}>{d.extra.accepted ? 'Opted in' : 'Opted out'}</b>{d.extra.test && <small className="adm-sub">Test payment (₹{d.extra.unitPrice} each)</small>}</td>
                     <td>{d.extra.accepted ? d.extra.qty : '—'}</td>
                     {view.amount && <td className="adm-nowrap">{d.extra.accepted ? inr(d.extra.amount) : '—'}</td>}
                     {view.amount && <td className="adm-nowrap">{inr(d.grandTotal)}</td>}
