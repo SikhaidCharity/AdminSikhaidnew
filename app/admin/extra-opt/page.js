@@ -194,7 +194,7 @@ export default function ExtraOptPage() {
               <tbody>
                 {pageRows.map((d) => (
                   <tr key={d.id}>
-                    <td className="adm-nowrap">{formatDate(d.createdAt)}</td>
+                    <td className="adm-nowrap">{formatDate(d.createdAt)}{d.extra.test && <small className="adm-sub adm-test">Test payment</small>}</td>
                     <td>{d.cause}<small className="adm-sub">{d.causeSlug}</small></td>
                     <td>{EXTRA_OFFERS[d.extra.offer]?.label || d.extra.offer}</td>
                     <td><b style={{ color: d.extra.accepted ? '#1e6b40' : '#5b617c' }}>{d.extra.accepted ? 'Opted in' : 'Opted out'}</b></td>
