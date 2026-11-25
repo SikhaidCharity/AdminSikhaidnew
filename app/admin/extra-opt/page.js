@@ -23,7 +23,6 @@ const QUICK_DAYS = [
   ['Today', 0, 0], ['Yesterday', 1, 1],
   ...[7, 10, 15, 20, 25, 30].map((n) => [`${n} days`, n - 1, 0]),
 ];
-const sourceText = (utm) => (utm?.utm_source ? `${utm.utm_source} / ${utm.utm_medium || '—'}` : 'Organic / Direct');
 
 export default function ExtraOptPage() {
   const { items, error, loading, reload } = useCollection('donations');
@@ -65,6 +64,19 @@ export default function ExtraOptPage() {
   const rate = rows.length ? Math.round((optedIn.length / rows.length) * 100) : 0;
   const reset = (fn) => (e) => { fn(e.target.value); setPage(1); };
 
+  // Where the donations came from: one line per UTM source / medium / campaign.
+  const bySource = useMemo(() => {
+    const groups = {};
+    rows.forEach((d) => {
+      const u = d.utm || {};
+      const key = [u.utm_source || '', u.utm_medium || '', u.utm_campaign || ''].join('|');
+      const g = groups[key] || (groups[key] = { source: u.utm_source || '', medium: u.utm_medium || '', campaign: u.utm_campaign || '', shown: 0, in: 0, qty: 0, extra: 0 });
+      g.shown += 1;
+      if (d.extra.accepted) { g.in += 1; g.qty += Number(d.extra.qty) || 0; g.extra += Number(d.extra.amount) || 0; }
+    });
+    return Object.values(groups).sort((a, b) => b.shown - a.shown);
+  }, [rows]);
+
   const exportRows = () => {
     const cols = [
       ['Date', (d) => formatDate(d.createdAt, true)],
@@ -83,7 +95,7 @@ export default function ExtraOptPage() {
     <main className="adm-page">
       <PageHead
         title="Extra Opt"
-        subtitle="The offer shown on Continue to Payment on the two test pages: a ₹500 blanket on /campaigns/langar-sewa-testing-1, and ₹500 langar for 5 people on /campaigns/mission-garmahat-testing-1. Paid donations only."
+        subtitle="The offer shown on Continue to Payment on the two ad pages: a ₹500 blanket on /campaigns/langar-sewa-ad-1, and ₹500 langar for 5 people on /campaigns/mission-garmahat-ad-1. Paid donations only."
       >
         <button type="button" className="adm-btn" onClick={reload}>Refresh</button>
         <button type="button" className="adm-btn" onClick={exportRows} disabled={rows.length === 0}>Export</button>
@@ -149,7 +161,7 @@ export default function ExtraOptPage() {
         <LoadState loading={loading} error={error} onRetry={reload} loadingText="Loading..." />
         {items && rows.length === 0 && (
           <p className="adm-empty">
-            {all.length === 0 ? 'No donations with the offer yet. They appear here once someone pays on one of the two test pages.' : 'Nothing matches these filters.'}
+            {all.length === 0 ? 'No donations with the offer yet. They appear here once someone pays on one of the two ad pages.' : 'Nothing matches these filters.'}
           </p>
         )}
 
@@ -165,7 +177,9 @@ export default function ExtraOptPage() {
                   <th>Quantity</th>
                   {view.amount && <th>Extra amount</th>}
                   {view.amount && <th>Donation total</th>}
-                  {view.utm && <th>UTM</th>}
+                  {view.utm && <th>UTM source</th>}
+                  {view.utm && <th>UTM medium</th>}
+                  {view.utm && <th>UTM campaign</th>}
                 </tr>
               </thead>
               <tbody>
@@ -178,7 +192,9 @@ export default function ExtraOptPage() {
                     <td>{d.extra.accepted ? d.extra.qty : '—'}</td>
                     {view.amount && <td className="adm-nowrap">{d.extra.accepted ? inr(d.extra.amount) : '—'}</td>}
                     {view.amount && <td className="adm-nowrap">{inr(d.grandTotal)}</td>}
-                    {view.utm && <td className="adm-small">{sourceText(d.utm)}{d.utm?.utm_campaign && <small className="adm-sub">{d.utm.utm_campaign}</small>}</td>}
+                    {view.utm && <td className="adm-small">{d.utm?.utm_source || 'Organic / Direct'}</td>}
+                    {view.utm && <td className="adm-small">{d.utm?.utm_medium || '—'}</td>}
+                    {view.utm && <td className="adm-small">{d.utm?.utm_campaign || '—'}</td>}
                   </tr>
                 ))}
               </tbody>
@@ -187,6 +203,40 @@ export default function ExtraOptPage() {
         )}
         <Pager page={page} pageCount={pageCount} total={rows.length} onPage={setPage} />
       </section>
+
+      {view.utm && bySource.length > 0 && (
+        <section className="adm-panel">
+          <div className="adm-panel-head"><p><b style={{ color: "var(--a-text, inherit)" }}>Where the donations came from</b> · by UTM source, medium and campaign (no UTM = Organic / Direct)</p></div>
+          <div className="adm-table-wrap">
+            <table className="adm-table">
+              <thead>
+                <tr>
+                  <th>UTM source</th>
+                  <th>UTM medium</th>
+                  <th>UTM campaign</th>
+                  <th>Shown the offer</th>
+                  <th>Opted in</th>
+                  <th>Quantity</th>
+                  {view.amount && <th>Extra collected</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {bySource.map((g) => (
+                  <tr key={[g.source, g.medium, g.campaign].join('|')}>
+                    <td>{g.source || 'Organic / Direct'}</td>
+                    <td>{g.medium || '—'}</td>
+                    <td>{g.campaign || '—'}</td>
+                    <td>{g.shown}</td>
+                    <td>{g.in} <small className="adm-sub">{Math.round((g.in / g.shown) * 100)}%</small></td>
+                    <td>{g.qty}</td>
+                    {view.amount && <td className="adm-nowrap">{inr(g.extra)}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </main>
   );
 }
