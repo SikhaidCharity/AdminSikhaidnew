@@ -10,7 +10,7 @@ import { UTM_FILTERS } from '@/lib/utm-filters';
 import { EXTRA_OFFERS } from '@/lib/extra-offers';
 
 // Extra Opt: the "add one more" offer shown on Continue to Payment on the two A/B test pages.
-// Langar Sewa offers a blanket (₹800 each); Mission Garmahat offers langar for 8 people (₹800 each).
+// Langar Sewa offers a blanket (₹500 each); Mission Garmahat offers langar for 5 people (₹500 each).
 // Every paid donation from those two campaigns records whether the donor opted in (and how many) or out.
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -83,7 +83,7 @@ export default function ExtraOptPage() {
     <main className="adm-page">
       <PageHead
         title="Extra Opt"
-        subtitle="The offer shown on Continue to Payment on the two test pages: a ₹800 blanket on /campaigns/langar-sewa-testing-1, and ₹800 langar for 8 people on /campaigns/mission-garmahat-testing-1. Paid donations only."
+        subtitle="The offer shown on Continue to Payment on the two test pages: a ₹500 blanket on /campaigns/langar-sewa-testing-1, and ₹500 langar for 5 people on /campaigns/mission-garmahat-testing-1. Paid donations only."
       >
         <button type="button" className="adm-btn" onClick={reload}>Refresh</button>
         <button type="button" className="adm-btn" onClick={exportRows} disabled={rows.length === 0}>Export</button>
@@ -94,7 +94,7 @@ export default function ExtraOptPage() {
           { label: 'Opted In', value: optedIn.length.toLocaleString('en-IN'), hint: `${rate}% of ${rows.length.toLocaleString('en-IN')} shown the offer`, icon: 'heart' },
           { label: 'Opted Out', value: optedOut.toLocaleString('en-IN'), hint: 'Said no thanks', icon: 'support' },
           ...(view.amount ? [{ label: 'Extra Collected', value: inr(extraTotal), hint: 'From opt-ins', icon: 'rupee' }] : []),
-          { label: 'Blankets · Langar', value: `${blankets} · ${langar}`, hint: `${blankets} blankets · langar for ${langar * 8} people`, icon: 'calendar' },
+          { label: 'Blankets · Langar', value: `${blankets} · ${langar}`, hint: `${blankets} blankets · langar for ${langar * 5} people`, icon: 'calendar' },
         ]}
       />
 
