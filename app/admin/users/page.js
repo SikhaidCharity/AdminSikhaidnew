@@ -17,7 +17,9 @@ function donationNote(u) {
   if (u.role === 'admin' || !seesDonations(u.sections)) return '';
   const hidden = DONATION_VIEW.filter((v) => u.donationView?.[v.key] === false).map((v) => v.label.replace('Donation ', '').toLowerCase());
   const sources = (u.donationView?.utmSources || []).map((id) => UTM_SOURCES.find((f) => f.id === id)?.label).filter(Boolean);
-  return [hidden.length && `Donations hide: ${hidden.join(', ')}`, sources.length && `Only from: ${sources.join(', ')}`].filter(Boolean).join(' · ');
+  const campaigns = u.donationView?.campaigns || [];
+  return [hidden.length && `Donations hide: ${hidden.join(', ')}`, sources.length && `Only from: ${sources.join(', ')}`,
+    campaigns.length && `Only campaigns: ${campaigns.join(', ')}`].filter(Boolean).join(' · ');
 }
 
 export default function UsersPage() {
@@ -172,13 +174,22 @@ function UserModal({ initial, onClose, onSaved }) {
     email: initial.email || '',
     role: initial.role || 'editor',
     sections: initial.role === 'editor' ? initial.sections : [],
-    donationView: { ...FULL_DONATION_VIEW, utmSources: [], ...(initial.role === 'editor' ? initial.donationView : {}) },
+    donationView: { ...FULL_DONATION_VIEW, utmSources: [], campaigns: [], ...(initial.role === 'editor' ? initial.donationView : {}) },
     password: '',
     active: initial.active !== false,
   });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
+  // Campaigns that can be picked under "Which donations they can see, by campaign".
+  const [campaignList, setCampaignList] = useState([]);
+  useEffect(() => {
+    let current = true;
+    adminApi.list('campaigns')
+      .then((list) => { if (current) setCampaignList((list || []).filter((c) => c.slug).map((c) => ({ slug: c.slug, title: c.title || c.slug }))); })
+      .catch(() => {});
+    return () => { current = false; };
+  }, []);
 
   const toggleSection = (key) => set('sections', form.sections.includes(key)
     ? form.sections.filter((s) => s !== key)
@@ -296,6 +307,28 @@ function UserModal({ initial, onClose, onSaved }) {
                         })}
                       />
                       {f.label}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="adm-perm-sub">
+              <b>Which donations they can see, by campaign</b>
+              <small className="adm-sub">Tick none to show donations from every campaign. Tick one or more to show only those (their ad pages count too).</small>
+              <div className="adm-perm-grid">
+                {[...campaignList, ...(form.donationView.campaigns || []).filter((s) => !campaignList.some((c) => c.slug === s)).map((s) => ({ slug: s, title: s }))].map((c) => {
+                  const list = form.donationView.campaigns || [];
+                  return (
+                    <label key={c.slug} className="adm-check">
+                      <input
+                        type="checkbox"
+                        checked={list.includes(c.slug)}
+                        onChange={(e) => set('donationView', {
+                          ...form.donationView,
+                          campaigns: e.target.checked ? [...list, c.slug] : list.filter((s) => s !== c.slug),
+                        })}
+                      />
+                      {c.title}
                     </label>
                   );
                 })}

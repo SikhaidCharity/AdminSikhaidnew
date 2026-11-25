@@ -1,15 +1,15 @@
 import { sendForDonation, sendOptions } from '@/lib/certificates';
 import { getItem, isDisabled, notAvailable } from '@/lib/local-store';
 import { guard, noAccess } from '@/lib/admin-users';
-import { donationView, donationVisible, redactDonation } from '@/lib/admin-sections';
+import { donationView, donationVisible, limitsDonations, redactDonation } from '@/lib/admin-sections';
 
 const SECTIONS = ['donations', 'monthly-donations'];
 // Sending needs the donor's details and amount (User Management → Donations view).
-// It also has to be a donation from an ad source they may see.
+// It also has to be a donation from an ad source and campaign they may see.
 const maySend = async (user, id) => {
   const view = donationView(user);
   if (!view.details || !view.amount) return false;
-  if (!view.utmSources.length) return true;
+  if (!limitsDonations(view)) return true;
   const donation = await getItem('donations', id).catch(() => null);
   return !donation || donationVisible(donation, view);
 };
