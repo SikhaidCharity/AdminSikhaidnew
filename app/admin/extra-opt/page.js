@@ -69,13 +69,13 @@ export default function ExtraOptPage() {
   const rate = rows.length ? Math.round((optedIn.length / rows.length) * 100) : 0;
   const reset = (fn) => (e) => { fn(e.target.value); setPage(1); };
 
-  // Where the donations came from: one line per UTM source / medium / campaign.
+  // Where the donations came from: one line per SikhAid campaign page + UTM source / medium / campaign.
   const bySource = useMemo(() => {
     const groups = {};
     rows.forEach((d) => {
       const u = d.utm || {};
-      const key = [u.utm_source || '', u.utm_medium || '', u.utm_campaign || ''].join('|');
-      const g = groups[key] || (groups[key] = { source: u.utm_source || '', medium: u.utm_medium || '', campaign: u.utm_campaign || '', shown: 0, in: 0, qty: 0, extra: 0 });
+      const key = [d.causeSlug || '', u.utm_source || '', u.utm_medium || '', u.utm_campaign || ''].join('|');
+      const g = groups[key] || (groups[key] = { key, page: d.cause || d.causeSlug || '', slug: d.causeSlug || '', source: u.utm_source || '', medium: u.utm_medium || '', campaign: u.utm_campaign || '', shown: 0, in: 0, qty: 0, extra: 0 });
       g.shown += 1;
       if (d.extra.accepted) { g.in += 1; g.qty += Number(d.extra.qty) || 0; g.extra += Number(d.extra.amount) || 0; }
     });
@@ -215,11 +215,12 @@ export default function ExtraOptPage() {
 
       {view.utm && bySource.length > 0 && (
         <section className="adm-panel">
-          <div className="adm-panel-head"><p><b style={{ color: "var(--a-text, inherit)" }}>Where the donations came from</b> · by UTM source, medium and campaign (no UTM = Organic / Direct)</p></div>
+          <div className="adm-panel-head"><p><b style={{ color: "var(--a-text, inherit)" }}>Where the donations came from</b> · by campaign page and UTM source, medium and campaign (no UTM = Organic / Direct)</p></div>
           <div className="adm-table-wrap">
             <table className="adm-table">
               <thead>
                 <tr>
+                  <th>Campaign</th>
                   <th>UTM source</th>
                   <th>UTM medium</th>
                   <th>UTM campaign</th>
@@ -231,7 +232,8 @@ export default function ExtraOptPage() {
               </thead>
               <tbody>
                 {bySource.map((g) => (
-                  <tr key={[g.source, g.medium, g.campaign].join('|')}>
+                  <tr key={g.key}>
+                    <td>{g.page || '—'}<small className="adm-sub">{g.slug}</small></td>
                     <td>{g.source || 'Organic / Direct'}</td>
                     <td>{g.medium || '—'}</td>
                     <td>{g.campaign || '—'}</td>
