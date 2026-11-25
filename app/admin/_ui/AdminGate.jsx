@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { adminApi } from '@/lib/admin-api';
@@ -58,14 +58,42 @@ export default function AdminGate({ children }) {
 
   if (!state.user) return <SignIn configured={state.configured} onSignedIn={setUser} />;
 
-  const user = state.user;
+  return <SignedIn user={state.user} pathname={pathname} signOut={signOut} setUser={setUser}>{children}</SignedIn>;
+}
+
+// On phones every table row becomes a card. Each cell is labelled with its column name (copied
+// from the table head), so columns that a user's access hides simply don't appear.
+function labelTables(root) {
+  root.querySelectorAll('table.adm-table').forEach((table) => {
+    const heads = [...table.querySelectorAll('thead th')].map((th) => th.textContent.trim());
+    table.querySelectorAll('tbody tr').forEach((tr) => {
+      [...tr.children].forEach((td, i) => {
+        const label = td.colSpan > 1 ? '' : heads[i] || '';
+        if (td.getAttribute('data-label') !== label) td.setAttribute('data-label', label);
+      });
+    });
+  });
+}
+
+function SignedIn({ user, pathname, signOut, setUser, children }) {
+  const rootRef = useRef(null);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+    let frame = 0;
+    const run = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => labelTables(root)); };
+    run();
+    const observer = new MutationObserver(run);
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  }, []);
   const can = (section) => canUse(user, section);
   const section = sectionForPath(pathname);
   const allowed = !section || section === 'account' || can(section);
 
   return (
     <AdminContext.Provider value={{ user, name: user.name, can, signOut, setUser }}>
-      <div className="adm">{allowed ? children : <NoAccess />}</div>
+      <div className="adm" ref={rootRef}>{allowed ? children : <NoAccess />}</div>
     </AdminContext.Provider>
   );
 }

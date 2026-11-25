@@ -85,7 +85,7 @@ export default function UsersPage() {
         <LoadState loading={!users && !error} error={error} onRetry={load} loadingText="Loading users..." />
         {users && (
           <div className="adm-table-wrap">
-            <table className="adm-table">
+            <table className="adm-table adm-user-cards">
               <thead>
                 <tr>
                   <th>User</th>
