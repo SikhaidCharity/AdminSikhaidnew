@@ -58,6 +58,8 @@ export default function ExtraOptPage() {
   const optedIn = rows.filter((d) => d.extra.accepted);
   const optedOut = rows.length - optedIn.length;
   const extraTotal = optedIn.reduce((s, d) => s + (Number(d.extra.amount) || 0), 0);
+  // The donations themselves (what the donor chose to give, without the extra or the SikhAid tip).
+  const donationTotal = rows.reduce((s, d) => s + (Number(d.amount) || 0), 0);
   const qtyOf = (kind) => optedIn.filter((d) => d.extra.offer === kind).reduce((s, d) => s + (Number(d.extra.qty) || 0), 0);
   const blankets = qtyOf('blanket');
   const langar = qtyOf('langar');
@@ -105,7 +107,10 @@ export default function ExtraOptPage() {
         items={[
           { label: 'Opted In', value: optedIn.length.toLocaleString('en-IN'), hint: `${rate}% of ${rows.length.toLocaleString('en-IN')} shown the offer`, icon: 'heart' },
           { label: 'Opted Out', value: optedOut.toLocaleString('en-IN'), hint: 'Said no thanks', icon: 'support' },
-          ...(view.amount ? [{ label: 'Extra Collected', value: inr(extraTotal), hint: 'From opt-ins', icon: 'rupee' }] : []),
+          ...(view.amount ? [
+            { label: 'Donation Amount', value: inr(donationTotal), hint: `${rows.length.toLocaleString('en-IN')} donations, without extra or tip`, icon: 'rupee' },
+            { label: 'Extra Collected', value: inr(extraTotal), hint: 'From opt-ins', icon: 'rupee' },
+          ] : []),
           { label: 'Blankets · Langar', value: `${blankets} · ${langar}`, hint: `${blankets} blankets · langar for ${langar * 5} people`, icon: 'calendar' },
         ]}
       />
