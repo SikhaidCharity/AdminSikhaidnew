@@ -197,6 +197,7 @@ export default function DonationsPage() {
                     <td>
                       {d.cause}
                       {view.utm && <small className="adm-sub">{d.utm?.utm_source ? `${d.utm.utm_source} / ${d.utm.utm_medium || '—'}` : 'Organic / Direct'}</small>}
+                      {view.utm && d.utm?.utm_campaign && <small className="adm-sub" title="UTM campaign">{d.utm.utm_campaign}</small>}
                       {!view.amount && d.isMonthly && <small className="adm-sub">Monthly</small>}
                     </td>
                     {view.amount && <td className="adm-nowrap">
