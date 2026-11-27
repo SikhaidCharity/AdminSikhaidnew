@@ -397,3 +397,6 @@
 /* Donations: the campaign name list has long names; keep it from stretching the filter row. */
 .adm-utm-pick { max-width: 280px; text-overflow: ellipsis; }
 @media (max-width: 720px) { .adm-inline select.adm-utm-pick { max-width: 68%; } }
+.adm-campaign-sum { margin: 0 0 16px; }
+.adm-campaign-sum .adm-row-on td { background: rgba(99, 102, 241, 0.08); }
+.adm-campaign-sum .adm-link { font-weight: 700; text-align: left; }

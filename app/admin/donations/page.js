@@ -102,7 +102,6 @@ export default function DonationsPage() {
       && (!view.utm || campaignMatch(d, utmCampaign))
       && (!view.utm || !utmType || (d.utm?.utm_medium || '') === utmType));
   }, [all, utmFilter, utmCampaign, utmType, view.utm]);
-  // The names and types to choose from: only those in the donations this user can see, most used first.
   // The names and types to choose from: only those in the donations this user can see within the chosen dates,
   // so a campaign that has ended drops out when its dates are not picked. Most donations first.
   const utmOptions = useMemo(() => {
@@ -118,8 +117,9 @@ export default function DonationsPage() {
       const name = d.utm?.utm_campaign;
       if (!name || (utmType && (d.utm?.utm_medium || '') !== utmType)) return;
       const key = campaignGroup(name);
-      const g = groups.get(key) || { n: 0, names: new Map() };
+      const g = groups.get(key) || { n: 0, amount: 0, names: new Map() };
       g.n += 1;
+      g.amount += Number(d.grandTotal) || 0;
       g.names.set(name, (g.names.get(name) || 0) + 1);
       groups.set(key, g);
     });
@@ -130,7 +130,7 @@ export default function DonationsPage() {
     });
     return {
       groups: [...groups].sort((x, y) => (x[0] === 'Other') - (y[0] === 'Other') || y[1].n - x[1].n)
-        .map(([name, g]) => ({ name, n: g.n, names: [...g.names].sort((x, y) => y[1] - x[1]) })),
+        .map(([name, g]) => ({ name, n: g.n, amount: g.amount, names: [...g.names].sort((x, y) => y[1] - x[1]) })),
       types: [...types].sort((x, y) => y[1] - x[1]),
     };
   }, [all, utmFilter, utmCampaign, utmType, from, to, view.utm]);
@@ -205,12 +205,7 @@ export default function DonationsPage() {
             <select className="adm-utm-pick" value={utmCampaign} onChange={(e) => { setUtmCampaign(e.target.value); setPage(1); }}>
               <option value="">All campaigns</option>
               {utmCampaign && !campaignPicks.includes(utmCampaign) && <option value={utmCampaign}>{utmCampaign.slice(2)} (0 in these dates)</option>}
-              {utmOptions.groups.map((g) => (
-                <optgroup key={g.name} label={`${g.name} · ${g.n}`}>
-                  <option value={`g:${g.name}`}>All {g.name} ({g.n})</option>
-                  {g.names.map(([v, n]) => <option key={v} value={`c:${v}`}>{'\u00a0\u00a0'}{v} ({n})</option>)}
-                </optgroup>
-              ))}
+              {utmOptions.groups.map((g) => <option key={g.name} value={`g:${g.name}`}>{g.name} ({g.n})</option>)}
             </select>
           </label>
           )}
@@ -256,6 +251,39 @@ export default function DonationsPage() {
             Filtered donations: <b>{rows.length}</b>
             {view.amount && <> · Filtered amount: <b>{inr(sum(rows, 'grandTotal'))}</b></>}
           </p>
+        )}
+
+        {view.utm && utmOptions.groups.length > 0 && (
+          // Every ad campaign put together by cause, for the chosen dates, ad source and type. Tap one to list it.
+          <div className="adm-table-wrap adm-campaign-sum">
+            <table className="adm-table">
+              <thead>
+                <tr>
+                  <th>Campaign ({period})</th>
+                  <th>Donations</th>
+                  {view.amount && <th>Amount</th>}
+                  <th>Ads</th>
+                </tr>
+              </thead>
+              <tbody>
+                {utmOptions.groups.map((g) => {
+                  const on = utmCampaign === `g:${g.name}`;
+                  return (
+                    <tr key={g.name} className={on ? 'adm-row-on' : undefined}>
+                      <td>
+                        <button type="button" className="adm-link" aria-pressed={on} onClick={() => { setUtmCampaign(on ? '' : `g:${g.name}`); setPage(1); }}>
+                          {g.name}
+                        </button>
+                      </td>
+                      <td>{g.n.toLocaleString('en-IN')}</td>
+                      {view.amount && <td><b>{inr(g.amount)}</b></td>}
+                      <td title={g.names.map(([v]) => v).join('\n')}>{g.names.length}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
 
         <LoadState loading={loading} error={error} onRetry={reload} loadingText="Loading donations..." />
