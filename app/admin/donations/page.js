@@ -29,6 +29,26 @@ const timeOf = (iso) => {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 };
 
+// Ad campaign names (utm_campaign) put together by what they are for: every Langar ad under Langar Sewa,
+// every winter ad under Mission Garmahat, and so on. A name that fits none goes under Other.
+const CAMPAIGN_GROUPS = [
+  ['Langar Sewa', /langar/i],
+  ['Mission Garmahat (Winter)', /winter|garm|gharam|blanket/i],
+  ['Nepal Flood', /nepal/i],
+  ['Bihar Flood', /bihar/i],
+  ['Assam Flood', /assam/i],
+  ['Punjab Flood', /punjab/i],
+  ['No Spot', /no_?spot|nospot/i],
+];
+const campaignGroup = (name) => CAMPAIGN_GROUPS.find(([, re]) => re.test(name))?.[0] || 'Other';
+// The pick is '' (all), 'g:<group>' (every ad name in that group) or 'c:<name>' (one ad name).
+const campaignMatch = (d, pick) => {
+  if (!pick) return true;
+  const name = d.utm?.utm_campaign || '';
+  if (!name) return false;
+  return pick.startsWith('g:') ? campaignGroup(name) === pick.slice(2) : name === pick.slice(2);
+};
+
 export default function DonationsPage() {
   const { items, error, loading, reload, setItems } = useCollection('donations');
   const [query, setQuery] = useState('');
@@ -57,7 +77,7 @@ export default function DonationsPage() {
     const filter = (view.utm && UTM_FILTERS.find((f) => f.id === utmFilter)) || UTM_FILTERS[0];
     return all.filter((d) => {
       if (!filter.test(d.utm || {})) return false;
-      if (view.utm && utmCampaign && (d.utm?.utm_campaign || '') !== utmCampaign) return false;
+      if (view.utm && !campaignMatch(d, utmCampaign)) return false;
       if (view.utm && utmType && (d.utm?.utm_medium || '') !== utmType) return false;
       if (from || to) {
         const day = dayOf(d.createdAt);
@@ -79,28 +99,47 @@ export default function DonationsPage() {
   const sourceRows = useMemo(() => {
     const filter = (view.utm && UTM_FILTERS.find((f) => f.id === utmFilter)) || UTM_FILTERS[0];
     return all.filter((d) => filter.test(d.utm || {})
-      && (!view.utm || !utmCampaign || (d.utm?.utm_campaign || '') === utmCampaign)
+      && (!view.utm || campaignMatch(d, utmCampaign))
       && (!view.utm || !utmType || (d.utm?.utm_medium || '') === utmType));
   }, [all, utmFilter, utmCampaign, utmType, view.utm]);
   // The names and types to choose from: only those in the donations this user can see, most used first.
+  // The names and types to choose from: only those in the donations this user can see within the chosen dates,
+  // so a campaign that has ended drops out when its dates are not picked. Most donations first.
   const utmOptions = useMemo(() => {
     const filter = (view.utm && UTM_FILTERS.find((f) => f.id === utmFilter)) || UTM_FILTERS[0];
-    const count = (key, other, otherKey) => {
-      const seen = new Map();
-      all.forEach((d) => {
-        const u = d.utm || {};
-        if (!filter.test(u) || (other && (u[otherKey] || '') !== other)) return;
-        if (u[key]) seen.set(u[key], (seen.get(u[key]) || 0) + 1);
-      });
-      return [...seen].sort((a, b) => b[1] - a[1]);
+    const inDates = (d) => {
+      if (!from && !to) return true;
+      const day = dayOf(d.createdAt);
+      return !(from && day < from) && !(to && day > to);
     };
-    return { campaigns: count('utm_campaign', utmType, 'utm_medium'), types: count('utm_medium', utmCampaign, 'utm_campaign') };
-  }, [all, utmFilter, utmCampaign, utmType, view.utm]);
+    const base = all.filter((d) => filter.test(d.utm || {}) && inDates(d));
+    const groups = new Map();
+    base.forEach((d) => {
+      const name = d.utm?.utm_campaign;
+      if (!name || (utmType && (d.utm?.utm_medium || '') !== utmType)) return;
+      const key = campaignGroup(name);
+      const g = groups.get(key) || { n: 0, names: new Map() };
+      g.n += 1;
+      g.names.set(name, (g.names.get(name) || 0) + 1);
+      groups.set(key, g);
+    });
+    const types = new Map();
+    base.forEach((d) => {
+      const type = d.utm?.utm_medium;
+      if (type && campaignMatch(d, utmCampaign)) types.set(type, (types.get(type) || 0) + 1);
+    });
+    return {
+      groups: [...groups].sort((x, y) => (x[0] === 'Other') - (y[0] === 'Other') || y[1].n - x[1].n)
+        .map(([name, g]) => ({ name, n: g.n, names: [...g.names].sort((x, y) => y[1] - x[1]) })),
+      types: [...types].sort((x, y) => y[1] - x[1]),
+    };
+  }, [all, utmFilter, utmCampaign, utmType, from, to, view.utm]);
+  const campaignPicks = utmOptions.groups.flatMap((g) => [`g:${g.name}`, ...g.names.map(([v]) => `c:${v}`)]);
   const last30 = sourceRows.filter((d) => new Date(d.createdAt).getTime() >= new Date().getTime() - 30 * DAY);
   const filterName = [
     utmFilter !== 'all' ? UTM_FILTERS.find((f) => f.id === utmFilter)?.label : view.utmSources.length ? 'All my sources' : 'All sources',
     view.utm && utmType,
-    view.utm && utmCampaign,
+    view.utm && utmCampaign.slice(2),
   ].filter(Boolean).join(' · ');
   const dayText = (day) => formatDate(`${day}T12:00:00`);
   const period = from && to ? (from === to ? dayText(from) : `${dayText(from)} – ${dayText(to)}`) : from ? `From ${dayText(from)}` : to ? `Up to ${dayText(to)}` : 'All dates';
@@ -164,9 +203,14 @@ export default function DonationsPage() {
           <label className="adm-inline">
             Campaign name
             <select className="adm-utm-pick" value={utmCampaign} onChange={(e) => { setUtmCampaign(e.target.value); setPage(1); }}>
-              <option value="">All campaign names</option>
-              {utmCampaign && !utmOptions.campaigns.some(([v]) => v === utmCampaign) && <option value={utmCampaign}>{utmCampaign} (0)</option>}
-              {utmOptions.campaigns.map(([v, n]) => <option key={v} value={v}>{v} ({n})</option>)}
+              <option value="">All campaigns</option>
+              {utmCampaign && !campaignPicks.includes(utmCampaign) && <option value={utmCampaign}>{utmCampaign.slice(2)} (0 in these dates)</option>}
+              {utmOptions.groups.map((g) => (
+                <optgroup key={g.name} label={`${g.name} · ${g.n}`}>
+                  <option value={`g:${g.name}`}>All {g.name} ({g.n})</option>
+                  {g.names.map(([v, n]) => <option key={v} value={`c:${v}`}>{'\u00a0\u00a0'}{v} ({n})</option>)}
+                </optgroup>
+              ))}
             </select>
           </label>
           )}
