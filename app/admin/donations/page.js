@@ -308,7 +308,7 @@ export default function DonationsPage() {
                 {pageRows.map((d) => (
                   <tr key={d.id}>
                     {view.details && <td className="adm-nowrap adm-small">{d.receiptNo}</td>}
-                    <td className="adm-nowrap">{formatDate(d.createdAt)}<small className="adm-sub">{timeOf(d.createdAt)}</small></td>
+                    <td className="adm-nowrap">{formatDate(d.createdAt)}<small className="adm-sub">{timeOf(d.createdAt)}</small>{d.test && <small className="adm-sub adm-test">Test payment</small>}</td>
                     {view.details && <td><b>{d.donor?.name || '—'}</b></td>}
                     {view.details && <td className="adm-nowrap">{d.donor?.phone || '—'}</td>}
                     <td>
