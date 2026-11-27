@@ -393,3 +393,7 @@
   .adm-user-cards td.adm-actions { order: 6; flex-basis: 100%; padding-top: 4px; }
   .adm-user-cards .adm-actions .adm-btn { min-height: 34px; }
 }
+
+/* Donations: the campaign name list has long names; keep it from stretching the filter row. */
+.adm-utm-pick { max-width: 280px; text-overflow: ellipsis; }
+@media (max-width: 720px) { .adm-inline select.adm-utm-pick { max-width: 68%; } }

@@ -33,6 +33,9 @@ export default function DonationsPage() {
   const { items, error, loading, reload, setItems } = useCollection('donations');
   const [query, setQuery] = useState('');
   const [utmFilter, setUtmFilter] = useState('all');
+  // Campaign name (utm_campaign) and ad type (utm_medium: Video, VA, IMG…), both '' for all.
+  const [utmCampaign, setUtmCampaign] = useState('');
+  const [utmType, setUtmType] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   // When the page opened: the quick date buttons count back from it.
@@ -54,6 +57,8 @@ export default function DonationsPage() {
     const filter = (view.utm && UTM_FILTERS.find((f) => f.id === utmFilter)) || UTM_FILTERS[0];
     return all.filter((d) => {
       if (!filter.test(d.utm || {})) return false;
+      if (view.utm && utmCampaign && (d.utm?.utm_campaign || '') !== utmCampaign) return false;
+      if (view.utm && utmType && (d.utm?.utm_medium || '') !== utmType) return false;
       if (from || to) {
         const day = dayOf(d.createdAt);
         if (from && day < from) return false;
@@ -66,17 +71,37 @@ export default function DonationsPage() {
         .toLowerCase()
         .includes(q);
     });
-  }, [all, query, utmFilter, from, to, view.utm]);
+  }, [all, query, utmFilter, utmCampaign, utmType, from, to, view.utm]);
 
   const { rows: pageRows, page, pageCount, setPage } = usePaged(rows, perPage);
   const sum = (list, field) => list.reduce((total, d) => total + (Number(d[field]) || 0), 0);
   // The cards follow the filters: the chosen dates, ad source and search (and only this user's sources).
   const sourceRows = useMemo(() => {
     const filter = (view.utm && UTM_FILTERS.find((f) => f.id === utmFilter)) || UTM_FILTERS[0];
-    return all.filter((d) => filter.test(d.utm || {}));
-  }, [all, utmFilter, view.utm]);
+    return all.filter((d) => filter.test(d.utm || {})
+      && (!view.utm || !utmCampaign || (d.utm?.utm_campaign || '') === utmCampaign)
+      && (!view.utm || !utmType || (d.utm?.utm_medium || '') === utmType));
+  }, [all, utmFilter, utmCampaign, utmType, view.utm]);
+  // The names and types to choose from: only those in the donations this user can see, most used first.
+  const utmOptions = useMemo(() => {
+    const filter = (view.utm && UTM_FILTERS.find((f) => f.id === utmFilter)) || UTM_FILTERS[0];
+    const count = (key, other, otherKey) => {
+      const seen = new Map();
+      all.forEach((d) => {
+        const u = d.utm || {};
+        if (!filter.test(u) || (other && (u[otherKey] || '') !== other)) return;
+        if (u[key]) seen.set(u[key], (seen.get(u[key]) || 0) + 1);
+      });
+      return [...seen].sort((a, b) => b[1] - a[1]);
+    };
+    return { campaigns: count('utm_campaign', utmType, 'utm_medium'), types: count('utm_medium', utmCampaign, 'utm_campaign') };
+  }, [all, utmFilter, utmCampaign, utmType, view.utm]);
   const last30 = sourceRows.filter((d) => new Date(d.createdAt).getTime() >= new Date().getTime() - 30 * DAY);
-  const filterName = utmFilter !== 'all' ? UTM_FILTERS.find((f) => f.id === utmFilter)?.label : view.utmSources.length ? 'All my sources' : 'All sources';
+  const filterName = [
+    utmFilter !== 'all' ? UTM_FILTERS.find((f) => f.id === utmFilter)?.label : view.utmSources.length ? 'All my sources' : 'All sources',
+    view.utm && utmType,
+    view.utm && utmCampaign,
+  ].filter(Boolean).join(' · ');
   const dayText = (day) => formatDate(`${day}T12:00:00`);
   const period = from && to ? (from === to ? dayText(from) : `${dayText(from)} – ${dayText(to)}`) : from ? `From ${dayText(from)}` : to ? `Up to ${dayText(to)}` : 'All dates';
 
@@ -132,6 +157,26 @@ export default function DonationsPage() {
               {UTM_FILTERS.filter((f) => f.id === 'all' || !view.utmSources.length || view.utmSources.includes(f.id)).map((f) => (
                 <option key={f.id} value={f.id}>{f.id === 'all' && view.utmSources.length ? 'All my sources' : f.label}</option>
               ))}
+            </select>
+          </label>
+          )}
+          {view.utm && (
+          <label className="adm-inline">
+            Campaign name
+            <select className="adm-utm-pick" value={utmCampaign} onChange={(e) => { setUtmCampaign(e.target.value); setPage(1); }}>
+              <option value="">All campaign names</option>
+              {utmCampaign && !utmOptions.campaigns.some(([v]) => v === utmCampaign) && <option value={utmCampaign}>{utmCampaign} (0)</option>}
+              {utmOptions.campaigns.map(([v, n]) => <option key={v} value={v}>{v} ({n})</option>)}
+            </select>
+          </label>
+          )}
+          {view.utm && (
+          <label className="adm-inline">
+            Type
+            <select value={utmType} onChange={(e) => { setUtmType(e.target.value); setPage(1); }}>
+              <option value="">All types</option>
+              {utmType && !utmOptions.types.some(([v]) => v === utmType) && <option value={utmType}>{utmType} (0)</option>}
+              {utmOptions.types.map(([v, n]) => <option key={v} value={v}>{v} ({n})</option>)}
             </select>
           </label>
           )}
