@@ -11,7 +11,7 @@ async function handlePOST(request) {
   if (isDisabled()) return json({ error: 'Not found' }, 404);
   const body = await request.json().catch(() => null);
   try {
-    return json(await startPayment(body));
+    return json(await startPayment(body, request));
   } catch (e) {
     if (e instanceof PayError) return json({ error: e.message }, e.status);
     console.error('Payment order failed:', e);
